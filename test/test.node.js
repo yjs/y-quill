@@ -22,8 +22,13 @@ global.innerHeight = 0
 })
 
 // @ts-ignore
-document.getSelection = () => ({ rangeCount: 0 })
+document.getSelection = () => ({ rangeCount: 0, removeAllRanges: () => {}, addRange: () => {} })
 // @ts-ignore
 document.execCommand = () => {}
+// @ts-ignore
+document.createRange = () => ({
+  setStart: () => {},
+  setEnd: () => {}
+})
 
 require('../dist/test.js')
