@@ -1,32 +1,52 @@
-# y-prosemirror
-> [ProseMirror](http://prosemirror.net/) Binding for [Yjs](https://github.com/y-js/yjs) - [Demo](https://yjs-demos.now.sh/prosemirror/)
+# y-quill
 
-This binding maps a Y.XmlFragment to the ProseMirror state.
+> [Quill Editor](https://quilljs.com/) binding for [Yjs](https://github.com/y-js/yjs) - [Demo](https://yjs-demos.now.sh/quill/)
 
-### Features
+This binding maps a Y.Text to a Quill instance. It optionally supports shared cursors via
+the [quill-cursors](https://github.com/reedsy/quill-cursors) module.
 
-* Shared Cursors
-* Successfully recovers when concurrents edit result in an invalid document schema
-
-### Example
+## Example
 
 ```js
-import { prosemirrorPlugin, cursorPlugin } from 'y-prosemirror'
+import { QuillBinding } from 'y-quill'
+import Quill from 'quill'
+import QuillCursors from 'quill-cursors'
 
 ..
 
-const type = ydocument.get('prosemirror', Y.XmlFragment)
+Quill.register('modules/cursors', QuillCursors)
 
-const prosemirrorView = new EditorView(document.querySelector('#editor'), {
-  state: EditorState.create({
-    schema,
-    plugins: exampleSetup({ schema }).concat([prosemirrorPlugin(type), cursorPlugin])
-  })
+const type = ydoc.getText('quill')
+
+var editor = new Quill('#editor-container', {
+  modules: {
+    cursors: true,
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ['bold', 'italic', 'underline'],
+      ['image', 'code-block']
+    ]
+  },
+  placeholder: 'Start collaborating...',
+  theme: 'snow' // or 'bubble'
 })
+
+// Optionally specify an Awareness instance, if supported by the Provider
+const binding = new QuillBinding(type, editor, provider.awareness)
+
+/*
+// Define user name and user name
+// Check the quill-cursors package on how to change the way cursors are rendered
+provider.awareness.setLocalStateField('user', {
+  name: 'Typing Jimmy',
+  color: 'blue'
+})
+*/
+
 ```
 
-Also look [here](https://github.com/y-js/yjs-demos/tree/master/prosemirror) for a working example.
+Also look [here](https://github.com/y-js/yjs-demos/tree/master/quill) for a working example.
 
-### License
+## License
 
 [The MIT License](./LICENSE) © Kevin Jahns
