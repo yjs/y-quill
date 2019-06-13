@@ -33,18 +33,22 @@ export const normQuillDelta = delta => {
  * @param {any} quillCursors
  */
 const updateCursor = (quillCursors, aw, clientId, doc, type) => {
-  if (aw && aw.cursor && clientId !== doc.clientID) {
-    const user = aw.user || {}
-    const color = user.color || '#ffa500'
-    const name = user.name || `User: ${clientId}`
-    quillCursors.createCursor(clientId.toString(), name, color)
-    const anchor = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.anchor), doc)
-    const head = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.head), doc)
-    if (anchor && head && anchor.type === type) {
-      quillCursors.moveCursor(clientId.toString(), { index: anchor.index, length: head.index - anchor.index })
+  try {
+    if (aw && aw.cursor && clientId !== doc.clientID) {
+      const user = aw.user || {}
+      const color = user.color || '#ffa500'
+      const name = user.name || `User: ${clientId}`
+      quillCursors.createCursor(clientId.toString(), name, color)
+      const anchor = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.anchor), doc)
+      const head = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.head), doc)
+      if (anchor && head && anchor.type === type) {
+        quillCursors.moveCursor(clientId.toString(), { index: anchor.index, length: head.index - anchor.index })
+      }
+    } else {
+      quillCursors.removeCursor(clientId.toString())
     }
-  } else {
-    quillCursors.removeCursor(clientId.toString())
+  } catch (err) {
+    console.error(err)
   }
 }
 
@@ -132,6 +136,10 @@ export class QuillBinding {
             })
           }
         }
+        // update all remote cursor locations
+        awareness.getStates().forEach((aw, clientId) => {
+          updateCursor(quillCursors, aw, clientId, doc, type)
+        })
       }
     }
     quill.on('editor-change', this._quillObserver)
