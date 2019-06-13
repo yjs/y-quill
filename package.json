@@ -41,7 +41,7 @@
     "lib0": "0.0.5"
   },
   "peerDependencies": {
-    "yjs": "13.0.0-88",
+    "yjs": ">=13.0.0-89",
     "y-protocols": ">=0.0.6",
     "quill": "^1.3.6"
   },
@@ -55,6 +55,6 @@
     "rollup-plugin-node-resolve": "^4.2.3",
     "standard": "^12.0.1",
     "y-protocols": "0.0.6",
-    "yjs": "13.0.0-88"
+    "yjs": "13.0.0-89"
   }
 }

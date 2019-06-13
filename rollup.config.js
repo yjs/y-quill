@@ -1,6 +1,10 @@
 import nodeResolve from 'rollup-plugin-node-resolve'
 import commonjs from 'rollup-plugin-commonjs'
 
+// If truthy, it expects all y-* dependencies in the upper directory.
+// This is only necessary if you want to test and make changes to several repositories.
+const localImports = process.env.LOCALIMPORTS
+
 const customModules = new Set([
   'y-websocket',
   'y-codemirror',
@@ -17,19 +21,26 @@ const customLibModules = new Set([
   'lib0',
   'y-protocols'
 ])
+
 const debugResolve = {
   resolveId (importee) {
-    if (importee === 'yjs/tests/testHelper.js') {
-      return `${process.cwd()}/../yjs/tests/testHelper.js`
-    }
-    if (importee === 'yjs') {
-      return `${process.cwd()}/../yjs/src/index.js`
-    }
-    if (customModules.has(importee.split('/')[0])) {
-      return `${process.cwd()}/../${importee}/src/${importee}.js`
-    }
-    if (customLibModules.has(importee.split('/')[0])) {
-      return `${process.cwd()}/../${importee}`
+    if (localImports) {
+      if (importee === 'yjs/tests/testHelper.js') {
+        return `${process.cwd()}/../yjs/tests/testHelper.js`
+      }
+      if (importee === 'yjs') {
+        return `${process.cwd()}/../yjs/src/index.js`
+      }
+      if (customModules.has(importee.split('/')[0])) {
+        return `${process.cwd()}/../${importee}/src/${importee}.js`
+      }
+      if (customLibModules.has(importee.split('/')[0])) {
+        return `${process.cwd()}/../${importee}`
+      }
+    } else {
+      if (importee === 'yjs') {
+        return `node_modules/yjs/src/index.js`
+      }
     }
     return null
   }
@@ -61,8 +72,7 @@ export default [{
   plugins: [
     debugResolve,
     nodeResolve({
-      module: true,
-      browser: true
+      mainFields: ['module', 'main']
     }),
     commonjs()
   ]
