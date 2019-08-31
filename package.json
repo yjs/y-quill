@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/y-js/y-quill#readme",
   "dependencies": {
-    "lib0": "0.0.5"
+    "lib0": "0.0.6"
   },
   "peerDependencies": {
     "yjs": ">=13.0.0-89",
@@ -55,6 +55,6 @@
     "rollup-plugin-node-resolve": "^4.2.3",
     "standard": "^12.0.1",
     "y-protocols": "0.0.6",
-    "yjs": "13.0.0-89"
+    "yjs": "13.0.0-96"
   }
 }
