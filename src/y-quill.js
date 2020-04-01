@@ -56,7 +56,7 @@ export class QuillBinding {
   /**
    * @param {Y.Text} type
    * @param {any} quill
-   * @param {Awareness} awareness
+   * @param {Awareness} [awareness]
    */
   constructor (type, quill, awareness) {
     const mux = createMutex()
@@ -71,7 +71,7 @@ export class QuillBinding {
     this._negatedUsedFormats = {}
     this.awareness = awareness
     this._awarenessChange = ({ added, removed, updated }) => {
-      const states = awareness.getStates()
+      const states = /** @type {Awareness} */ (awareness).getStates()
       added.forEach(id => {
         updateCursor(quillCursors, states.get(id), id, doc, type)
       })

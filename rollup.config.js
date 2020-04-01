@@ -1,5 +1,5 @@
-import nodeResolve from 'rollup-plugin-node-resolve'
-import commonjs from 'rollup-plugin-commonjs'
+import nodeResolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
 
 // If truthy, it expects all y-* dependencies in the upper directory.
 // This is only necessary if you want to test and make changes to several repositories.
@@ -63,6 +63,22 @@ export default [{
   external: id => /^lib0\//.test(id)
 }, {
   input: './test/index.js',
+  external: ['isomorphic.js'],
+  output: {
+    name: 'test',
+    file: 'dist/test.cjs',
+    format: 'cjs',
+    sourcemap: true
+  },
+  plugins: [
+    debugResolve,
+    nodeResolve({
+      mainFields: ['module', 'main']
+    }),
+    commonjs()
+  ]
+}, {
+  input: './test/index.js',
   output: {
     name: 'test',
     file: 'dist/test.js',
@@ -72,7 +88,7 @@ export default [{
   plugins: [
     debugResolve,
     nodeResolve({
-      mainFields: ['module', 'main']
+      mainFields: ['module', 'browser', 'main']
     }),
     commonjs()
   ]

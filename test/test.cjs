@@ -31,4 +31,5 @@ document.createRange = () => ({
   setEnd: () => {}
 })
 
-require('../dist/test.js')
+// @ts-ignore
+require('../dist/test.cjs')
