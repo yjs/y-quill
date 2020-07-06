@@ -50,7 +50,7 @@ export default [{
   input: './src/y-quill.js',
   output: [{
     name: 'yQuill',
-    file: 'dist/y-quill.js',
+    file: 'dist/y-quill.cjs',
     format: 'cjs',
     sourcemap: true,
     paths: path => {
