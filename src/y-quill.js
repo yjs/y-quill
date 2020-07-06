@@ -121,10 +121,10 @@ export class QuillBinding {
       // always check selection
       if (awareness && quillCursors) {
         const sel = quill.getSelection()
-        const aw = awareness.getLocalState()
+        const aw = /** @type {any} */ (awareness.getLocalState())
         if (sel === null) {
           if (awareness.getLocalState() !== null) {
-            awareness.setLocalStateField('cursor', null)
+            awareness.setLocalStateField('cursor', /** @type {any} */ (null))
           }
         } else {
           const anchor = Y.createRelativePositionFromTypeIndex(type, sel.index)
