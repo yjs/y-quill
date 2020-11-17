@@ -158,7 +158,7 @@ export class QuillBinding {
   }
   destroy () {
     this.type.unobserve(this._typeObserver)
-    this.quill.off(this._quillObserver)
+    this.quill.off('editor-change', this._quillObserver)
     if (this.awareness) {
       this.awareness.off('change', this._awarenessChange)
     }
