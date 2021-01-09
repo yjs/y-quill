@@ -22,6 +22,15 @@ const customLibModules = new Set([
   'y-protocols'
 ])
 
+const yquillResolve = {
+  resolveId (importee) {
+    if (importee === 'y-quill') {
+      return `${process.cwd()}/src/y-quill.js`
+    }
+    return null
+  }
+}
+
 const debugResolve = {
   resolveId (importee) {
     if (localImports) {
@@ -36,10 +45,6 @@ const debugResolve = {
       }
       if (customLibModules.has(importee.split('/')[0])) {
         return `${process.cwd()}/../${importee}`
-      }
-    } else {
-      if (importee === 'yjs') {
-        return `node_modules/yjs/src/index.js`
       }
     }
     return null
@@ -64,6 +69,22 @@ export default [{
     }
   }],
   external: id => /^lib0\//.test(id)
+}, {
+  input: './demo/quill-demo.js',
+  output: [{
+    name: 'quillDemo',
+    file: 'dist/quill-demo.js',
+    format: 'iife',
+    sourcemap: true
+  }],
+  plugins: [
+    yquillResolve,
+    debugResolve,
+    nodeResolve({
+      mainFields: ['module', 'browser', 'main']
+    }),
+    commonjs()
+  ]
 }, {
   input: './test/index.js',
   external: ['isomorphic.js'],
