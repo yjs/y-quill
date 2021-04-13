@@ -36,6 +36,24 @@ export const testBasicInsert = () => {
   t.assert(editor.getText() === 'texttext\n')
 }
 
+/**
+ * @param {t.TestCase} tc
+ */
+export const testConcurrentOverlappingFormatting = tc => {
+  const { editor, type } = createQuillEditor()
+  const { editor: editor2, type: type2 } = createQuillEditor()
+  type.insert(0, 'abcdef')
+  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
+  editor.updateContents([{ retain: 3, attributes: { bold: true } }])
+  editor2.updateContents([{ retain: 2 }, { retain: 2, attributes: { bold: true } }])
+  // sync
+  Y.applyUpdate(type.doc, Y.encodeStateAsUpdate(type2.doc))
+  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
+  console.log(editor.getContents().ops)
+  console.log(editor2.getContents().ops)
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+}
+
 let charCounter = 0
 
 const marksChoices = [
