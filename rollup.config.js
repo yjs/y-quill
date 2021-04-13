@@ -27,6 +27,9 @@ const yquillResolve = {
     if (importee === 'y-quill') {
       return `${process.cwd()}/src/y-quill.js`
     }
+    if (importee === 'yjs') {
+      return `${process.cwd()}/node_modules/yjs/src/index.js`
+    }
     return null
   }
 }
@@ -95,6 +98,7 @@ export default [{
     sourcemap: true
   },
   plugins: [
+    yquillResolve,
     debugResolve,
     nodeResolve({
       mainFields: ['module', 'main']
@@ -110,6 +114,7 @@ export default [{
     sourcemap: true
   },
   plugins: [
+    yquillResolve,
     debugResolve,
     nodeResolve({
       mainFields: ['module', 'browser', 'main']
