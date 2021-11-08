@@ -10,7 +10,7 @@ Quill.register('modules/cursors', QuillCursors)
 
 window.addEventListener('load', () => {
   const ydoc = new Y.Doc()
-  const provider = new WebrtcProvider('quill-demo', ydoc)
+  const provider = new WebrtcProvider('quill-demo-x', ydoc)
   const type = ydoc.getText('quill')
   const editorContainer = document.createElement('div')
   editorContainer.setAttribute('id', 'editor')
