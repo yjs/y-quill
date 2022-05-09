@@ -2,7 +2,6 @@
  * @module bindings/quill
  */
 
-import { createMutex } from 'lib0/mutex.js'
 import * as Y from 'yjs' // eslint-disable-line
 import { Awareness } from 'y-protocols/awareness.js' // eslint-disable-line
 
@@ -59,9 +58,7 @@ export class QuillBinding {
    * @param {Awareness} [awareness]
    */
   constructor (type, quill, awareness) {
-    const mux = createMutex()
     const doc = /** @type {Y.Doc} */ (type.doc)
-    this.mux = mux
     this.type = type
     this.doc = doc
     this.quill = quill
@@ -82,8 +79,11 @@ export class QuillBinding {
         quillCursors.removeCursor(id.toString())
       })
     }
+    /**
+     * @param {Y.YTextEvent} event
+     */
     this._typeObserver = event => {
-      mux(() => {
+      if (event.transaction.origin !== this) {
         const eventDelta = event.delta
         // We always explicitly set attributes, otherwise concurrent edits may
         // result in quill assuming that a text insertion shall inherit existing
@@ -97,11 +97,11 @@ export class QuillBinding {
             delta.push(d)
           }
         }
-        quill.updateContents(delta, 'yjs')
-      })
+        quill.updateContents(delta, this)
+      }
     }
     type.observe(this._typeObserver)
-    this._quillObserver = (eventType, delta) => {
+    this._quillObserver = (eventType, delta, state, origin) => {
       if (delta && delta.ops) {
         // update content
         const ops = delta.ops
@@ -114,9 +114,11 @@ export class QuillBinding {
             }
           }
         })
-        mux(() => {
-          type.applyDelta(ops)
-        })
+        if (origin !== this) {
+          doc.transact(() => {
+            type.applyDelta(ops)
+          }, this)
+        }
       }
       // always check selection
       if (awareness && quillCursors) {
@@ -143,11 +145,9 @@ export class QuillBinding {
       }
     }
     quill.on('editor-change', this._quillObserver)
-    mux(() => {
-      // This indirectly initializes _negatedUsedFormats.
-      // Make sure that this call this after the _quillObserver is set.
-      quill.setContents(type.toDelta())
-    })
+    // This indirectly initializes _negatedUsedFormats.
+    // Make sure that this call this after the _quillObserver is set.
+    quill.setContents(type.toDelta(), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
