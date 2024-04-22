@@ -16,7 +16,8 @@ global.innerHeight = 0
   'navigator',
   'Text',
   'HTMLElement',
-  'MutationObserver'
+  'MutationObserver',
+  'Element'
 ].forEach(name => {
   global[name] = window[name]
 })

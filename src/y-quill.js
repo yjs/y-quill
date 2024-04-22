@@ -3,7 +3,9 @@
  */
 
 import * as Y from 'yjs' // eslint-disable-line
-import { Awareness } from 'y-protocols/awareness.js' // eslint-disable-line
+
+/**
+ * @typedef {import('y-protocols/awareness').Awareness} Awareness
 
 /**
  * Removes the pending '\n's if it has no attributes.
