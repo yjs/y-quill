@@ -109,7 +109,7 @@ export class QuillBinding {
         const ops = delta.ops
         ops.forEach(op => {
           if (op.attributes !== undefined) {
-            for (let key in op.attributes) {
+            for (const key in op.attributes) {
               if (this._negatedUsedFormats[key] === undefined) {
                 this._negatedUsedFormats[key] = false
               }
@@ -158,6 +158,7 @@ export class QuillBinding {
       awareness.on('change', this._awarenessChange)
     }
   }
+
   destroy () {
     this.type.unobserve(this._typeObserver)
     this.quill.off('editor-change', this._quillObserver)
