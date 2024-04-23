@@ -123,7 +123,7 @@ export class QuillBinding {
         }
       }
       // always check selection
-      if (awareness && quillCursors) {
+      if (awareness && quillCursors && origin !== 'silent') {
         const sel = quill.getSelection()
         const aw = /** @type {any} */ (awareness.getLocalState())
         if (sel === null) {
