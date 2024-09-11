@@ -90,23 +90,6 @@ export default [{
   ]
 }, {
   input: './test/index.js',
-  external: ['isomorphic.js'],
-  output: {
-    name: 'test',
-    file: 'dist/test.cjs',
-    format: 'cjs',
-    sourcemap: true
-  },
-  plugins: [
-    yquillResolve,
-    debugResolve,
-    nodeResolve({
-      mainFields: ['module', 'main']
-    }),
-    commonjs()
-  ]
-}, {
-  input: './test/index.js',
   output: {
     name: 'test',
     file: 'dist/test.js',

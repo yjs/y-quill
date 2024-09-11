@@ -1,6 +1,9 @@
-const fs = require('fs')
-const path = require('path')
-const { JSDOM } = require('jsdom')
+import fs from 'fs'
+import path from 'path'
+import { JSDOM } from 'jsdom'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const documentContent = fs.readFileSync(path.join(__dirname, '../test.html'))
 const { window } = new JSDOM(documentContent)
@@ -29,5 +32,4 @@ document.createRange = () => ({
   setEnd: () => {}
 })
 
-// @ts-ignore
-require('../dist/test.cjs')
+await import('./index.js')

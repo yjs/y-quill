@@ -2,7 +2,9 @@ import * as t from 'lib0/testing.js'
 import * as prng from 'lib0/prng.js'
 import * as math from 'lib0/math.js'
 import * as Y from 'yjs'
-import { applyRandomTests } from 'yjs/tests/testHelper.js'
+import { applyRandomTests } from 'yjs/testHelper'
+import Delta from 'quill-delta'
+import * as object from 'lib0/object'
 
 import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
 import Quill from 'quill'
@@ -15,16 +17,91 @@ import Quill from 'quill'
  */
 
 /**
+ * @typedef {{ update: { [v:string]: any } }} KvOp
+ */
+
+const embeds = {
+  kv: {
+    /**
+     * @param {Y.XmlElement} yxml
+     * @param {KvOp} op
+     */
+    update: (yxml, op) => {
+      if (op.update !== undefined) {
+        for (const key in op.update) {
+          yxml.setAttribute(key, op.update[key])
+        }
+      }
+    },
+    /**
+     * @param {Y.XmlElement} yxml
+     * @param {Y.YXmlEvent} event
+     * @return {KvOp}
+     */
+    eventToDelta: (yxml, event) => {
+      /**
+       * @type {KvOp}
+       */
+      const op = {
+        update: {}
+      }
+      object.forEach(event.changes.keys, (v, k) => {
+        if (v.action === 'add' || v.action === 'update') {
+          op.update[k] = yxml.getAttribute(k)
+        }
+      })
+      return op
+    }
+  },
+  delta: {
+    /**
+     * @param {Y.XmlElement} yxml
+     * @param {Array<import('quill').DeltaOperation>} op
+     */
+    update: (yxml, op) => {
+      if (!yxml.hasAttribute('ytext')) {
+        yxml.setAttribute('ytext', new Y.Text())
+      }
+      const ytext = yxml.getAttribute('ytext')
+      ytext.apply(op)
+    },
+    /**
+     * @param {Y.XmlElement} _yxml
+     * @param {Y.YXmlEvent} event
+     * @return {Array<import('quill').DeltaOperation>}
+     */
+    eventToDelta: (_yxml, event) => {
+      return event.delta
+    }
+  }
+}
+
+Delta.registerEmbed('delta', {
+  compose: (a, b) => new Delta(a).compose(new Delta(b)).ops,
+  transform: (a, b, priority) =>
+    new Delta(a).transform(new Delta(b), priority).ops,
+  invert: (a, b) => new Delta(a).invert(new Delta(b)).ops
+})
+
+/**
  * @param {any} [y]
  * @return {TestData}
  */
 const createQuillEditor = (y = new Y.Doc()) => {
   const type = y.getText('text')
   const editor = new Quill(document.createElement('div'))
-  const binding = new QuillBinding(type, editor)
+  const binding = new QuillBinding(type, editor, undefined, { embeds })
   return {
     editor, binding, type
   }
+}
+
+export const testCustomEmbedBasic = () => {
+  const { editor, type } = createQuillEditor()
+  type.insert(0, 'text')
+  t.assert(editor.getText() === 'text\n')
+  editor.insertText(0, 'text')
+  t.assert(editor.getText() === 'texttext\n')
 }
 
 export const testBasicInsert = () => {

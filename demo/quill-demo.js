@@ -3,10 +3,15 @@
 import * as Y from 'yjs'
 import { WebrtcProvider } from 'y-webrtc'
 import { QuillBinding } from 'y-quill'
+import Delta from 'quill-delta'
 import Quill from 'quill'
 import QuillCursors from 'quill-cursors'
+import QuillTableEmbed, { tableHandler } from 'quill/modules/tableEmbed'
 
 Quill.register('modules/cursors', QuillCursors)
+
+QuillTableEmbed.register()
+Delta.registerEmbed('table-embed', tableHandler)
 
 window.addEventListener('load', () => {
   const ydoc = new Y.Doc()

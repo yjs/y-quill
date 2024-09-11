@@ -3,12 +3,16 @@
  */
 
 import * as Y from 'yjs' // eslint-disable-line
+import Delta from 'quill-delta'
 
 /**
  * @typedef {import('y-protocols/awareness').Awareness} Awareness
+ */
 
 /**
  * Removes the pending '\n's if it has no attributes.
+ *
+ * @param {any} delta
  */
 export const normQuillDelta = delta => {
   if (delta.length > 0) {
@@ -53,17 +57,36 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
   }
 }
 
+/**
+ * @template {any} EmbedDelta
+ * @template {Y.XmlElement} YType
+ *
+ * @typedef {Object} EmbedDef
+ * @property {(a:YType,b:EmbedDelta,keepNull:boolean)=>YType} EmbedDef.update
+ * @property {(src:YType,event:Y.YXmlEvent)=>EmbedDelta} EmbedDef.eventToDelta
+ */
+
+/**
+ * @template {any} EmbedDelta
+ * @template {Y.XmlElement} YType
+ *
+ * @typedef {Object} QuillBindingOpts
+ * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
+ */
+
 export class QuillBinding {
   /**
    * @param {Y.Text} type
    * @param {any} quill
    * @param {Awareness} [awareness]
+   * @param {QuillBindingOpts<any,any>} opts
    */
-  constructor (type, quill, awareness) {
+  constructor (type, quill, awareness, { embeds } = {}) {
     const doc = /** @type {Y.Doc} */ (type.doc)
     this.type = type
     this.doc = doc
     this.quill = quill
+    this.embeds = embeds
     const quillCursors = quill.getModule('cursors') || null
     this.quillCursors = quillCursors
     // This object contains all attributes used in the quill instance
