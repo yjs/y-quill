@@ -9,9 +9,92 @@ import * as object from 'lib0/object'
 import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
 import Quill from 'quill'
 
+const Parchment = Quill.import('parchment')
+const BlockEmbed = Quill.import('blots/block/embed')
+
+class DeltaBlot extends BlockEmbed {
+  static tagName = 'DIV'
+  static blotName = 'delta'
+
+  constructor (scroll, node, value) {
+    super(scroll, node)
+    /**
+     * @type {Delta}
+     */
+    this.d = new Delta(value)
+  }
+
+  static create (value) {
+    /**
+     * @type {HTMLElement}
+     */
+    return super.create(value)
+  }
+
+  delta () {
+    return new Delta().insert({ delta: this.d.ops })
+  }
+
+  /**
+   * @return {HTMLElement}
+   */
+  static value (_domNode) {
+    throw new Error('unexpected case')
+  }
+
+  /**
+   * @param {HTMLElement} domNode
+   */
+  static formats (domNode) {
+    console.log('calling parchment.delta.formats', ...arguments)
+    return undefined
+  }
+
+  updateContent (change) {
+    console.log('calling parchment.delta.updateContent', ...arguments)
+    this.d = this.d.compose(new Delta(change))
+  }
+
+  /**
+   * @param {string} name
+   * @param {string} value
+   */
+  format (name, value) {
+    console.log('calling parchment.delta.format', ...arguments)
+    if (name === 'alt') {
+      this.domNode.setAttribute(name, value)
+    } else {
+      super.format(name, value)
+    }
+  }
+}
+
+// Essential formats
+const Block = Quill.import('blots/block')
+const Break = Quill.import('blots/break')
+const Container = Quill.import('blots/container')
+const Cursor = Quill.import('blots/cursor')
+const Inline = Quill.import('blots/inline')
+const Scroll = Quill.import('blots/scroll')
+const Text = Quill.import('blots/text')
+const Image = Quill.import('formats/image')
+
+const registry = new Parchment.Registry()
+registry.register(
+  Scroll,
+  Block,
+  Break,
+  Container,
+  Cursor,
+  Inline,
+  Text,
+  Image,
+  DeltaBlot
+)
+
 /**
  * @typedef {object} TestData
- * @property {any} TestData.editor
+ * @property {Quill} TestData.editor
  * @property {QuillBinding} TestData.binding
  * @property {Y.Text} type
  */
@@ -20,6 +103,9 @@ import Quill from 'quill'
  * @typedef {{ update: { [v:string]: any } }} KvOp
  */
 
+/**
+ * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef }}
+ */
 const embeds = {
   kv: {
     /**
@@ -59,19 +145,30 @@ const embeds = {
      * @param {Array<import('quill').DeltaOperation>} op
      */
     update: (yxml, op) => {
+      console.log('calling y.delta.update')
       if (!yxml.hasAttribute('ytext')) {
         yxml.setAttribute('ytext', new Y.Text())
       }
       const ytext = yxml.getAttribute('ytext')
-      ytext.apply(op)
+      ytext.applyDelta(op)
     },
+
     /**
-     * @param {Y.XmlElement} _yxml
-     * @param {Y.YXmlEvent} event
+     * @param {Y.XmlElement} yxml
+     * @param {Array<Y.YEvent>} events
      * @return {Array<import('quill').DeltaOperation>}
      */
-    eventToDelta: (_yxml, event) => {
-      return event.delta
+    eventsToDelta: (yxml, events) => {
+      console.log('calling y.delta.eventToDelta')
+      const ytext = yxml.getAttribute('ytext')
+      const ytextevent = events.find(event => event.target === ytext)
+      if (ytextevent) {
+        return ytextevent.delta
+      }
+      return {}
+    },
+    typeToDelta: (yxml) => {
+      return yxml.getAttribute('ytext').toDelta()
     }
   }
 }
@@ -89,7 +186,7 @@ Delta.registerEmbed('delta', {
  */
 const createQuillEditor = (y = new Y.Doc()) => {
   const type = y.getText('text')
-  const editor = new Quill(document.createElement('div'))
+  const editor = new Quill(document.createElement('div'), { registry })
   const binding = new QuillBinding(type, editor, undefined, { embeds })
   return {
     editor, binding, type
@@ -97,11 +194,17 @@ const createQuillEditor = (y = new Y.Doc()) => {
 }
 
 export const testCustomEmbedBasic = () => {
-  const { editor, type } = createQuillEditor()
-  type.insert(0, 'text')
-  t.assert(editor.getText() === 'text\n')
-  editor.insertText(0, 'text')
-  t.assert(editor.getText() === 'texttext\n')
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{ insert: { delta: [{ insert: 'failed test' }] } }])
+  editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
+  console.log('contents: ', editor.getContents().ops[0])
+  t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  console.log('editor.contents', editor.getContents().ops)
+  console.log('type.toJSON()', type.toDelta())
+  t.compare(type.toDelta(), type2.toDelta())
 }
 
 export const testBasicInsert = () => {
@@ -113,9 +216,9 @@ export const testBasicInsert = () => {
 }
 
 /**
- * @param {t.TestCase} tc
+ * @param {t.TestCase} _tc
  */
-export const testConcurrentOverlappingFormatting = tc => {
+export const testConcurrentOverlappingFormatting = _tc => {
   const { editor, type } = createQuillEditor()
   const { editor: editor2, type: type2 } = createQuillEditor()
   type.insert(0, 'abcdef')
@@ -144,42 +247,42 @@ const marksChoices = [
  */
 const qChanges = [
   /**
-   * @param {Y.Doc} y
+   * @param {Y.Doc} _y
    * @param {prng.PRNG} gen
    * @param {TestData} p
    */
-  (y, gen, p) => { // insert text
+  (_y, gen, p) => { // insert text
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     const attrs = prng.oneOf(gen, marksChoices)
     const text = charCounter++ + prng.word(gen)
     p.editor.insertText(insertPos, text, attrs)
   },
   /**
-   * @param {Y.Doc} y
+   * @param {Y.Doc} _y
    * @param {prng.PRNG} gen
    * @param {TestData} p
    */
-  (y, gen, p) => { // insert embed
+  (_y, gen, p) => { // insert embed
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     p.editor.insertEmbed(insertPos, 'image', 'https://user-images.githubusercontent.com/5553757/48975307-61efb100-f06d-11e8-9177-ee895e5916e5.png')
   },
   /**
-   * @param {Y.Doc} y
+   * @param {Y.Doc} _y
    * @param {prng.PRNG} gen
    * @param {TestData} p
    */
-  (y, gen, p) => { // delete text
+  (_y, gen, p) => { // delete text
     const contentLen = p.editor.getText().length
     const insertPos = prng.int32(gen, 0, contentLen)
     const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
     p.editor.deleteText(insertPos, overwrite)
   },
   /**
-   * @param {Y.Doc} y
+   * @param {Y.Doc} _y
    * @param {prng.PRNG} gen
    * @param {TestData} p
    */
-  (y, gen, p) => { // format text
+  (_y, gen, p) => { // format text
     const contentLen = p.editor.getText().length
     const insertPos = prng.int32(gen, 0, contentLen)
     const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
@@ -187,11 +290,11 @@ const qChanges = [
     p.editor.format(insertPos, overwrite, format)
   },
   /**
-   * @param {Y.Doc} y
+   * @param {Y.Doc} _y
    * @param {prng.PRNG} gen
    * @param {TestData} p
    */
-  (y, gen, p) => { // insert codeblock
+  (_y, gen, p) => { // insert codeblock
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     const text = charCounter++ + prng.word(gen)
     const ops = []

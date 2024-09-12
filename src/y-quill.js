@@ -3,6 +3,7 @@
  */
 
 import * as Y from 'yjs' // eslint-disable-line
+import * as object from 'lib0/object'
 import Delta from 'quill-delta'
 
 /**
@@ -62,14 +63,14 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
  * @template {Y.XmlElement} YType
  *
  * @typedef {Object} EmbedDef
- * @property {(a:YType,b:EmbedDelta,keepNull:boolean)=>YType} EmbedDef.update
- * @property {(src:YType,event:Y.YXmlEvent)=>EmbedDelta} EmbedDef.eventToDelta
+ * @property {(a:YType,b:EmbedDelta)=>YType} EmbedDef.update
+ * @property {(src:YType,events:Array<Y.YXmlEvent>)=>EmbedDelta} EmbedDef.eventsToDelta
+ * @property {(src:YType)=>EmbedDelta} EmbedDef.typeToDelta
  */
 
 /**
  * @template {any} EmbedDelta
  * @template {Y.XmlElement} YType
- *
  * @typedef {Object} QuillBindingOpts
  * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
  */
@@ -81,7 +82,7 @@ export class QuillBinding {
    * @param {Awareness} [awareness]
    * @param {QuillBindingOpts<any,any>} opts
    */
-  constructor (type, quill, awareness, { embeds } = {}) {
+  constructor (type, quill, awareness, { embeds = {} } = {}) {
     const doc = /** @type {Y.Doc} */ (type.doc)
     this.type = type
     this.doc = doc
@@ -105,31 +106,95 @@ export class QuillBinding {
       })
     }
     /**
-     * @param {Y.YTextEvent} event
+     * @param {Array<Y.YEvent>} _events
+     * @param {Y.Transaction} tr
      */
-    this._typeObserver = event => {
-      if (event.transaction.origin !== this) {
-        const eventDelta = event.delta
-        // We always explicitly set attributes, otherwise concurrent edits may
-        // result in quill assuming that a text insertion shall inherit existing
-        // attributes.
-        const delta = []
-        for (let i = 0; i < eventDelta.length; i++) {
-          const d = eventDelta[i]
-          if (d.insert !== undefined) {
-            delta.push(Object.assign({}, d, { attributes: Object.assign({}, this._negatedUsedFormats, d.attributes || {}) }))
+    this._typeObserver = (_events, tr) => {
+      if (tr.origin !== this) {
+        /**
+         * @type {Map<Y.XmlElement, any>}
+         */
+        const embedEvents = new Map()
+        tr.changedParentTypes.forEach((events, child) => {
+          if (child.parent === this.type && child instanceof Y.XmlElement) {
+            const embed = embeds[child.nodeName]
+            if (embed == null) {
+              console.warn(`Custom embed "${child.nodeName}" not defined!`)
+            }
+            embedEvents.set(child, { [child.nodeName]: embed.eventsToDelta(child, /** @type {Array<Y.YXmlEvent>} */ (events)) })
+          }
+        })
+        /**
+         * @type {Array<{ retain: number } | { retain: object }>}
+         */
+        const embedEventOps = []
+        if (embedEvents.size > 0) {
+          for (let item = type._start, offset = 0; item !== null && embedEventOps.length !== embedEvents.size; item = item.right) {
+            if (item.content.constructor === Y.ContentType) {
+              const child = /** @type {Y.XmlElement} */ (/** @type {Y.ContentType} */ (item.content).type)
+              if (embedEvents.has(child)) {
+                if (offset > 0) {
+                  embedEventOps.push({ retain: offset })
+                  offset = 0
+                }
+                embedEventOps.push({ retain: embedEvents.get(child) })
+              }
+            } else if (!item.deleted && item.countable) offset += item.length
+          }
+        }
+
+        let delta = new Delta(embedEventOps)
+
+        const event = (tr.changedParentTypes.get(/** @type {any} */ (type)) || []).find(event => event.target === type)
+        if (event != null) {
+          const eventDelta = event.delta
+          // We always explicitly set attributes, otherwise concurrent edits may
+          // result in quill assuming that a text insertion shall inherit existing
+          // attributes.
+          const sanitizedDelta = []
+          for (let i = 0; i < eventDelta.length; i++) {
+            const d = eventDelta[i]
+            if (d.insert != null) {
+              let op = d
+              if (d.insert instanceof Y.AbstractType) {
+                const nodeName = d.insert instanceof Y.XmlElement ? d.insert.nodeName : null
+                const embedDef = nodeName != null ? embeds[nodeName] : null
+                if (embedDef != null) {
+                  op = { insert: { [/** @type {string} */ (nodeName)]: embedDef.typeToDelta(d.insert) } }
+                } else {
+                  op = { insert: d.insert.toJSON() }
+                }
+              }
+              sanitizedDelta.push(Object.assign({}, op, { attributes: Object.assign({}, this._negatedUsedFormats, d.attributes || {}) }))
+            } else {
+              sanitizedDelta.push(d)
+            }
+          }
+
+          if (delta.ops.length === 0) {
+            delta = new Delta(/** @type {any} */ (sanitizedDelta))
           } else {
-            delta.push(d)
+            delta = new Delta(/** @type {any} */ (sanitizedDelta)).compose(delta)
           }
         }
         quill.updateContents(delta, this)
       }
     }
-    type.observe(this._typeObserver)
-    this._quillObserver = (eventType, delta, state, origin) => {
+    type.observeDeep(this._typeObserver)
+    /**
+     * @param {any} _eventType
+     * @param {any} delta
+     * @param {any} _state
+     * @param {any} origin
+     */
+    this._quillObserver = (_eventType, delta, _state, origin) => {
       if (delta && delta.ops) {
-        // update content
         const ops = delta.ops
+        // Split ops into two sets: changes related to custom embeds and all other changes. The
+        // changes will be applied separately, as the Y.Text delta doesn't understand custom embeds.
+        // Also, update negatedUsedFormats.
+        const embedChanges = new Delta()
+        const changes = new Delta()
         ops.forEach(op => {
           if (op.attributes !== undefined) {
             for (const key in op.attributes) {
@@ -138,10 +203,63 @@ export class QuillBinding {
               }
             }
           }
+          const potentialCustomEmbed = (op.retain != null && typeof op.retain === 'object') ? op.retain : (op.insert != null && typeof op.insert === 'object' ? op.insert : null)
+          if (potentialCustomEmbed) {
+            const embed = embeds[object.keys(op.retain ?? op.insert)[0]]
+            if (embed != null) {
+              embedChanges.push(op)
+              if (op.retain != null) {
+                changes.retain(1)
+              }
+              return
+            }
+            embedChanges.retain(1) // only jump over the embed
+          } else if (op.retain != null) {
+            embedChanges.retain(op.retain)
+          } else if (op.insert != null) {
+            embedChanges.retain(op.insert.length)
+          }
+          changes.push(op)
         })
         if (origin !== this) {
           doc.transact(() => {
-            type.applyDelta(ops)
+            type.applyDelta(changes)
+            let item = type._start
+            /**
+             * @param {number} n
+             */
+            const forward = (n) => {
+              while (item != null && n > 0) {
+                if (!item.deleted && item.countable) {
+                  n -= item.length
+                }
+                item = item.right
+              }
+            }
+            embedChanges.forEach((op, index) => {
+              if (op.retain != null && op.retain.constructor === Number) {
+                forward(op.retain)
+              } else if (op.insert != null) {
+                const embedName = object.keys(op.insert)[0]
+                const embedDef = embeds[embedName]
+                const yembed = new Y.XmlElement(embedName)
+                type.insertEmbed(index, yembed)
+                embedDef.update(yembed, op.insert[embedName])
+                forward(1)
+              } else if (op.retain) {
+                const yembedType = /** @type {any} */ (item?.content).type
+                if (yembedType instanceof Y.XmlElement) {
+                  const embedName = yembedType.nodeName
+                  const embedDef = embeds[embedName]
+                  if (embedDef != null && op.retain[embedName] != null) {
+                    embedDef.update(yembedType, op.retain[embedName])
+                  } else {
+                    console.warn(`expected embed type "${embedName}"`)
+                  }
+                }
+                forward(1)
+              }
+            })
           }, this)
         }
       }
@@ -183,7 +301,7 @@ export class QuillBinding {
   }
 
   destroy () {
-    this.type.unobserve(this._typeObserver)
+    this.type.unobserveDeep(this._typeObserver)
     this.quill.off('editor-change', this._quillObserver)
     if (this.awareness) {
       this.awareness.off('change', this._awarenessChange)
