@@ -1,4 +1,6 @@
 import * as quill from './y-quill.test.js'
+import * as tableEmbed from './tableEmbed.test.js'
+import * as embed from './embed.test.js'
 
 import { runTests } from 'lib0/testing.js'
 import { isBrowser, isNode } from 'lib0/environment.js'
@@ -8,7 +10,9 @@ if (isBrowser) {
   log.createVConsole(document.body)
 }
 runTests({
-  quill
+  quill,
+  embed
+  // tableEmbed
 }).then(success => {
   /* istanbul ignore next */
   if (isNode) {

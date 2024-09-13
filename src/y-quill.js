@@ -4,9 +4,7 @@
 
 import * as Y from 'yjs' // eslint-disable-line
 import * as object from 'lib0/object'
-import * as array from 'lib0/array'
 import Delta from 'quill-delta'
-import * as fun from 'lib0/function'
 
 /**
  * @typedef {import('y-protocols/awareness').Awareness} Awareness
@@ -146,7 +144,8 @@ export class QuillBinding {
          */
         const embedEventOps = []
         if (embedEvents.size > 0) {
-          for (let item = type._start, offset = 0; item !== null && embedEventOps.length !== embedEvents.size; item = item.right) {
+          let missingEmbedEventPositions = embedEvents.size
+          for (let item = type._start, offset = 0; item !== null && missingEmbedEventPositions > 0; item = item.right) {
             if (item.content.constructor === Y.ContentType) {
               const child = /** @type {Y.XmlElement} */ (/** @type {Y.ContentType} */ (item.content).type)
               if (embedEvents.has(child)) {
@@ -155,8 +154,11 @@ export class QuillBinding {
                   offset = 0
                 }
                 embedEventOps.push({ retain: embedEvents.get(child) })
+                missingEmbedEventPositions--
+                continue
               }
-            } else if (!item.deleted && item.countable) offset += item.length
+            }
+            if (!item.deleted && item.countable) offset += item.length
           }
         }
 
@@ -173,13 +175,11 @@ export class QuillBinding {
             const d = eventDelta[i]
             if (d.insert != null) {
               let op = d
-              if (d.insert instanceof Y.AbstractType) {
-                const nodeName = d.insert instanceof Y.XmlElement ? d.insert.nodeName : null
-                const embedDef = nodeName != null ? embeds[nodeName] : null
+              if (d.insert instanceof Y.XmlElement) {
+                const nodeName = d.insert.nodeName
+                const embedDef = embeds[nodeName]
                 if (embedDef != null) {
                   op = { insert: { [/** @type {string} */ (nodeName)]: embedDef.typeToDelta(d.insert) } }
-                } else {
-                  op = { insert: d.insert.toJSON() }
                 }
               }
               sanitizedDelta.push(Object.assign({}, op, { attributes: Object.assign({}, this._negatedUsedFormats, d.attributes || {}) }))
@@ -209,7 +209,8 @@ export class QuillBinding {
           const { ops: implicitChanges } = new Delta(typeDeltaToQuillDelta(normQuillDelta(type.toDelta()), this)).diff(new Delta(normQuillDelta(quill.getContents().ops)))
           if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n')) {
             this.doc.transact(() => {
-              type.applyDelta(implicitChanges)
+              // reuse the quillObserver which transforms custom embeds
+              this._quillObserver(null, { ops: implicitChanges }, null, 'implicit')
             }, this)
           }
         }
@@ -264,13 +265,14 @@ export class QuillBinding {
              * @param {number} n
              */
             const forward = (n) => {
-              while (item != null && n > 0) {
+              while (item != null && (n > 0 || !item.countable || item.deleted)) {
                 if (!item.deleted && item.countable) {
                   n -= item.length
                 }
                 item = item.right
               }
             }
+            forward(0)
             let index = 0
             embedChanges.forEach(op => {
               if (op.retain != null && op.retain.constructor === Number) {

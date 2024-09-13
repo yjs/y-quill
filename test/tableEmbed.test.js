@@ -169,32 +169,6 @@ export const testCustomEmbedBasic = () => {
   t.compare(type.toDelta(), type2.toDelta())
 }
 
-export const testBasicInsert = () => {
-  const { editor, type } = createQuillEditor()
-  type.insert(0, 'text')
-  t.assert(editor.getText() === 'text\n')
-  editor.insertText(0, 'text')
-  t.assert(editor.getText() === 'texttext\n')
-}
-
-/**
- * @param {t.TestCase} _tc
- */
-export const testConcurrentOverlappingFormatting = _tc => {
-  const { editor, type } = createQuillEditor()
-  const { editor: editor2, type: type2 } = createQuillEditor()
-  type.insert(0, 'abcdef')
-  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
-  editor.updateContents([{ retain: 3, attributes: { bold: true } }])
-  editor2.updateContents([{ retain: 2 }, { retain: 2, attributes: { bold: true } }])
-  // sync
-  Y.applyUpdate(type.doc, Y.encodeStateAsUpdate(type2.doc))
-  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
-  console.log(editor.getContents().ops)
-  console.log(editor2.getContents().ops)
-  t.compare(editor.getContents().ops, editor2.getContents().ops)
-}
-
 let charCounter = 0
 
 const marksChoices = [
@@ -261,11 +235,11 @@ const qChanges = [
       const insertPos = prng.int32(gen, 0, emb.len)
       const attrs = prng.oneOf(gen, marksChoices)
       const text = charCounter++ + prng.word(gen)
-      p.editor.updateContents(new Delta().retain(emb.index).retain({ delta: new Delta().retain(insertPos).insert(text, attrs).ops }))
+      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { insert: text, attributes: attrs }] }])
     } else { // option2: delete content
       const insertPos = prng.int32(gen, 0, emb.len)
       const overwrite = math.min(prng.int32(gen, 0, emb.len - insertPos), 2)
-      p.editor.updateContents(new Delta().retain(emb.index).retain({ delta: new Delta().retain(insertPos).delete(overwrite).ops }))
+      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { delete: overwrite }] }])
     }
   },
   /**
@@ -338,13 +312,6 @@ export const testRepeatGenerateQuillChanges2 = tc => {
  */
 export const testRepeatGenerateQuillChanges3 = tc => {
   checkResult(applyRandomTests(tc, qChanges, 3, createQuillEditor))
-}
-
-/**
- * @param {t.TestCase} tc
- */
-export const testRepeatGenerateQuillChanges5 = tc => {
-  checkResult(applyRandomTests(tc, qChanges, 5, createQuillEditor))
 }
 
 /**

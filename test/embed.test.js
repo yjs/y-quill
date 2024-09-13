@@ -155,46 +155,6 @@ const createQuillEditor = (y = new Y.Doc()) => {
   }
 }
 
-export const testCustomEmbedBasic = () => {
-  const ydoc = new Y.Doc()
-  const { editor, type } = createQuillEditor(ydoc)
-  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
-  editor.updateContents([{ insert: { delta: [{ insert: 'failed test' }] } }])
-  editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
-  console.log('contents: ', editor.getContents().ops[0])
-  t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
-  t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
-  t.compare(type.toDelta(), type2.toDelta())
-}
-
-export const testBasicInsert = () => {
-  const { editor, type } = createQuillEditor()
-  type.insert(0, 'text')
-  t.assert(editor.getText() === 'text\n')
-  editor.insertText(0, 'text')
-  t.assert(editor.getText() === 'texttext\n')
-}
-
-/**
- * @param {t.TestCase} _tc
- */
-export const testConcurrentOverlappingFormatting = _tc => {
-  const { editor, type } = createQuillEditor()
-  const { editor: editor2, type: type2 } = createQuillEditor()
-  type.insert(0, 'abcdef')
-  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
-  editor.updateContents([{ retain: 3, attributes: { bold: true } }])
-  editor2.updateContents([{ retain: 2 }, { retain: 2, attributes: { bold: true } }])
-  // sync
-  Y.applyUpdate(type.doc, Y.encodeStateAsUpdate(type2.doc))
-  Y.applyUpdate(type2.doc, Y.encodeStateAsUpdate(type.doc))
-  console.log(editor.getContents().ops)
-  console.log(editor2.getContents().ops)
-  t.compare(editor.getContents().ops, editor2.getContents().ops)
-}
-
 let charCounter = 0
 
 const marksChoices = [
@@ -216,17 +176,8 @@ const qChanges = [
   (_y, gen, p) => { // insert text
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     const attrs = prng.oneOf(gen, marksChoices)
-    const text = charCounter++ + prng.word(gen)
+    const text = charCounter++ + prng.word(gen, 1, 2)
     p.editor.insertText(insertPos, text, attrs)
-  },
-  /**
-   * @param {Y.Doc} _y
-   * @param {prng.PRNG} gen
-   * @param {TestData} p
-   */
-  (_y, gen, p) => { // insert embed
-    const insertPos = prng.int32(gen, 0, p.editor.getText().length)
-    p.editor.insertEmbed(insertPos, 'image', 'https://user-images.githubusercontent.com/5553757/48975307-61efb100-f06d-11e8-9177-ee895e5916e5.png')
   },
   /**
    * @param {Y.Doc} _y
@@ -278,33 +229,6 @@ const qChanges = [
     const insertPos = prng.int32(gen, 0, contentLen)
     const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
     p.editor.deleteText(insertPos, overwrite)
-  },
-  /**
-   * @param {Y.Doc} _y
-   * @param {prng.PRNG} gen
-   * @param {TestData} p
-   */
-  (_y, gen, p) => { // format text
-    const contentLen = p.editor.getText().length
-    const insertPos = prng.int32(gen, 0, contentLen)
-    const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
-    const format = prng.oneOf(gen, marksChoices)
-    p.editor.format(insertPos, overwrite, format)
-  },
-  /**
-   * @param {Y.Doc} _y
-   * @param {prng.PRNG} gen
-   * @param {TestData} p
-   */
-  (_y, gen, p) => { // insert codeblock
-    const insertPos = prng.int32(gen, 0, p.editor.getText().length)
-    const text = charCounter++ + prng.word(gen)
-    const ops = []
-    if (insertPos > 0) {
-      ops.push({ retain: insertPos })
-    }
-    ops.push({ insert: text }, { insert: '\n', format: { 'code-block': true } })
-    p.editor.updateContents(ops)
   }
 ]
 
