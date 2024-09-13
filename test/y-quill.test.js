@@ -46,12 +46,10 @@ class DeltaBlot extends BlockEmbed {
    * @param {HTMLElement} domNode
    */
   static formats (domNode) {
-    console.log('calling parchment.delta.formats', ...arguments)
     return undefined
   }
 
   updateContent (change) {
-    console.log('calling parchment.delta.updateContent', ...arguments)
     this.d = this.d.compose(new Delta(change))
   }
 
@@ -60,7 +58,6 @@ class DeltaBlot extends BlockEmbed {
    * @param {string} value
    */
   format (name, value) {
-    console.log('calling parchment.delta.format', ...arguments)
     if (name === 'alt') {
       this.domNode.setAttribute(name, value)
     } else {
@@ -145,7 +142,6 @@ const embeds = {
      * @param {Array<import('quill').DeltaOperation>} op
      */
     update: (yxml, op) => {
-      console.log('calling y.delta.update')
       if (!yxml.hasAttribute('ytext')) {
         yxml.setAttribute('ytext', new Y.Text())
       }
@@ -159,7 +155,6 @@ const embeds = {
      * @return {Array<import('quill').DeltaOperation>}
      */
     eventsToDelta: (yxml, events) => {
-      console.log('calling y.delta.eventToDelta')
       const ytext = yxml.getAttribute('ytext')
       const ytextevent = events.find(event => event.target === ytext)
       if (ytextevent) {
@@ -265,6 +260,48 @@ const qChanges = [
   (_y, gen, p) => { // insert embed
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     p.editor.insertEmbed(insertPos, 'image', 'https://user-images.githubusercontent.com/5553757/48975307-61efb100-f06d-11e8-9177-ee895e5916e5.png')
+  },
+  /**
+   * @param {Y.Doc} _y
+   * @param {prng.PRNG} gen
+   * @param {TestData} p
+   */
+  (_y, gen, p) => { // insert custom embed
+    console.log(`client ${_y.clientID} inserted cembed`)
+    const insertPos = prng.int32(gen, 0, p.editor.getText().length)
+    p.editor.insertEmbed(insertPos, 'delta', [{ insert: 'some content' }])
+  },
+  /**
+   * @param {Y.Doc} _y
+   * @param {prng.PRNG} gen
+   * @param {TestData} p
+   */
+  (_y, gen, p) => { // update custom embed
+    console.log(`client ${_y.clientID} updating cembed`)
+    /**
+     * @type {Array<{ len: number, index: number }>}
+     */
+    const customEmbeds = []
+    let index = 0
+    p.editor.getContents().forEach(op => {
+      if (op.insert != null && typeof op.insert === 'object' && op.insert.delta != null) {
+        const len = new Delta(op.insert.delta).length()
+        customEmbeds.push({ len, index })
+      }
+      index += Delta.Op.length(op)
+    })
+    if (customEmbeds.length === 0) return
+    const emb = prng.oneOf(gen, customEmbeds)
+    if (prng.bool(gen)) { // option1: insert content
+      const insertPos = prng.int32(gen, 0, emb.len)
+      const attrs = prng.oneOf(gen, marksChoices)
+      const text = charCounter++ + prng.word(gen)
+      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { insert: text, attributes: attrs }] }])
+    } else { // option2: delete content
+      const insertPos = prng.int32(gen, 0, emb.len)
+      const overwrite = math.min(prng.int32(gen, 0, emb.len - insertPos), 2)
+      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { delete: overwrite }] }])
+    }
   },
   /**
    * @param {Y.Doc} _y

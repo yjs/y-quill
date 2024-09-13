@@ -4,7 +4,9 @@
 
 import * as Y from 'yjs' // eslint-disable-line
 import * as object from 'lib0/object'
+import * as array from 'lib0/array'
 import Delta from 'quill-delta'
+import * as fun from 'lib0/function'
 
 /**
  * @typedef {import('y-protocols/awareness').Awareness} Awareness
@@ -19,7 +21,7 @@ export const normQuillDelta = delta => {
   if (delta.length > 0) {
     const d = delta[delta.length - 1]
     const insert = d.insert
-    if (d.attributes === undefined && insert !== undefined && insert.slice(-1) === '\n') {
+    if (d.attributes === undefined && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
       delta = delta.slice()
       let ins = insert.slice(0, -1)
       while (ins.slice(-1) === '\n') {
@@ -74,6 +76,21 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
  * @typedef {Object} QuillBindingOpts
  * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
  */
+
+/**
+ * @param {Array<any>} delta
+ * @param {QuillBinding} binding
+ */
+const typeDeltaToQuillDelta = (delta, binding) => delta.map(op => {
+  if (op.insert != null && op.insert instanceof Y.XmlElement) {
+    const embedName = op.insert.nodeName
+    const embedDef = binding.embeds[embedName]
+    if (embedDef != null) {
+      return { insert: { [embedName]: embedDef.typeToDelta(op.insert) } }
+    }
+  }
+  return op
+})
 
 export class QuillBinding {
   /**
@@ -177,7 +194,25 @@ export class QuillBinding {
             delta = new Delta(/** @type {any} */ (sanitizedDelta)).compose(delta)
           }
         }
-        quill.updateContents(delta, this)
+        /**
+         * @type {Delta}
+         */
+        const appliedDelta = quill.updateContents(delta, this)
+        const equals = appliedDelta.ops.length === delta.ops.length && appliedDelta.ops.every((op, i) => {
+          const otherOp = delta.ops[i]
+          if (op.insert != null) return op.insert === otherOp.insert || (typeof op.insert === 'object' && typeof op.insert === typeof otherOp.insert)
+          if (op.retain != null) return op.retain === otherOp.retain || (typeof op.retain === 'object' && typeof op.retain === typeof otherOp.retain)
+          return op.delete === otherOp.delete
+        })
+        if (!equals) {
+          // diff the documents if we find implicit changes from quill
+          const { ops: implicitChanges } = new Delta(typeDeltaToQuillDelta(normQuillDelta(type.toDelta()), this)).diff(new Delta(normQuillDelta(quill.getContents().ops)))
+          if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n')) {
+            this.doc.transact(() => {
+              type.applyDelta(implicitChanges)
+            }, this)
+          }
+        }
       }
     }
     type.observeDeep(this._typeObserver)
@@ -223,7 +258,7 @@ export class QuillBinding {
         })
         if (origin !== this) {
           doc.transact(() => {
-            type.applyDelta(changes)
+            type.applyDelta(changes.ops)
             let item = type._start
             /**
              * @param {number} n
@@ -236,7 +271,8 @@ export class QuillBinding {
                 item = item.right
               }
             }
-            embedChanges.forEach((op, index) => {
+            let index = 0
+            embedChanges.forEach(op => {
               if (op.retain != null && op.retain.constructor === Number) {
                 forward(op.retain)
               } else if (op.insert != null) {
@@ -259,6 +295,7 @@ export class QuillBinding {
                 }
                 forward(1)
               }
+              index += Delta.Op.length(op)
             })
           }, this)
         }
@@ -290,7 +327,7 @@ export class QuillBinding {
     quill.on('editor-change', this._quillObserver)
     // This indirectly initializes _negatedUsedFormats.
     // Make sure that this call this after the _quillObserver is set.
-    quill.setContents(type.toDelta(), this)
+    quill.setContents(typeDeltaToQuillDelta(type.toDelta(), this), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
