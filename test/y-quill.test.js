@@ -312,6 +312,10 @@ const qChanges = [
  * @param {any} result
  */
 const checkResult = result => {
+  // all "delta" custom embeds are transformed to Y.XmlElements
+  t.assert(result.testObjects[0].type.toDelta().every(d => {
+    return d.insert == null || d.insert.delta == null
+  }))
   for (let i = 1; i < result.testObjects.length; i++) {
     const p1 = normQuillDelta(result.testObjects[i - 1].editor.getContents().ops)
     const p2 = normQuillDelta(result.testObjects[i].editor.getContents().ops)

@@ -47,6 +47,26 @@ provider.awareness.setLocalStateField('user', {
 
 Also look [here](https://github.com/y-js/yjs-demos/tree/master/quill) for a working example.
 
+## Custom Embeds
+
+y-quill supports custom embeds, a spec by `slab/quill` / `slab/delta` to support
+custom, nested transformations. However, you need teach y-quill how to translate
+the custom deltas to Yjs transformations and how to translate Yjs
+transformations to custom deltas. This package already ships with a couple of
+custom deltas that might be useful. 
+
+#### Custom Delta: delta
+
+@todo!
+
+#### Custom Delta: table-embed
+
+@todo!
+
+### How to build custom deltas
+
+@todo!
+
 ## License
 
 [The MIT License](./LICENSE) © Kevin Jahns

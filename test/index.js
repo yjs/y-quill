@@ -11,8 +11,8 @@ if (isBrowser) {
 }
 runTests({
   quill,
-  embed
-  // tableEmbed
+  embed,
+  tableEmbed
 }).then(success => {
   /* istanbul ignore next */
   if (isNode) {

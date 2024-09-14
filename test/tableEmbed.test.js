@@ -1,6 +1,7 @@
 import * as t from 'lib0/testing.js'
 import * as prng from 'lib0/prng.js'
 import * as math from 'lib0/math.js'
+import * as object from 'lib0/object'
 import * as Y from 'yjs'
 import { applyRandomTests } from 'yjs/testHelper'
 import Delta from 'quill-delta'
@@ -8,19 +9,40 @@ import Delta from 'quill-delta'
 import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
 import Quill from 'quill'
 
+import { tableEmbed } from '../embeds/table-embed.js'
+import TableEmbed from 'quill/modules/tableEmbed.js'
+
 const Parchment = Quill.import('parchment')
 const BlockEmbed = Quill.import('blots/block/embed')
+TableEmbed.register()
 
-class DeltaBlot extends BlockEmbed {
+/**
+ * @typedef {Array<DeltaOp>} DeltaOps
+ */
+/**
+ * @typedef {{ insert: string, attributes: object? }|{ retain: number, attributes: object }|{ delete: number }} DeltaOp
+ */
+
+/**
+ * @type {Object} TableDocument
+ * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.rows
+ * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.columns
+ * @property {{ [key:string]: { content: DeltaOps, attributes: any } }} TableDocument.cells
+ */
+
+/**
+ * Just for testing. Doesn't render anything anything.
+ */
+class TableBlot extends BlockEmbed {
   static tagName = 'DIV'
-  static blotName = 'delta'
+  static blotName = 'table-embed'
 
   constructor (scroll, node, value) {
     super(scroll, node)
     /**
-     * @type {Delta}
+     * @type {TableDocument}
      */
-    this.d = new Delta(value)
+    this.d = value
   }
 
   static create (value) {
@@ -31,7 +53,7 @@ class DeltaBlot extends BlockEmbed {
   }
 
   delta () {
-    return new Delta().insert({ delta: this.d.ops })
+    return new Delta([{ insert: { 'table-embed': this.d } }])
   }
 
   /**
@@ -42,14 +64,16 @@ class DeltaBlot extends BlockEmbed {
   }
 
   /**
-   * @param {HTMLElement} domNode
+   * @param {HTMLElement} _domNode
    */
-  static formats (domNode) {
+  static formats (_domNode) {
     return undefined
   }
 
   updateContent (change) {
-    this.d = this.d.compose(new Delta(change))
+    const start = new Delta([{ insert: { 'table-embed': this.d } }])
+    const composed = start.compose(new Delta([{ retain: { 'table-embed': change } }]))
+    this.d = composed.ops[0].insert['table-embed']
   }
 
   /**
@@ -85,7 +109,7 @@ registry.register(
   Inline,
   Text,
   Image,
-  DeltaBlot
+  TableBlot
 )
 
 /**
@@ -96,51 +120,11 @@ registry.register(
  */
 
 /**
- * @typedef {{ update: { [v:string]: any } }} KvOp
- */
-
-/**
  * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef }}
  */
 const embeds = {
-  delta: {
-    /**
-     * @param {Y.XmlElement} yxml
-     * @param {Array<import('quill').DeltaOperation>} op
-     */
-    update: (yxml, op) => {
-      if (!yxml.hasAttribute('ytext')) {
-        yxml.setAttribute('ytext', new Y.Text())
-      }
-      const ytext = yxml.getAttribute('ytext')
-      ytext.applyDelta(op)
-    },
-
-    /**
-     * @param {Y.XmlElement} yxml
-     * @param {Array<Y.YEvent>} events
-     * @return {Array<import('quill').DeltaOperation>}
-     */
-    eventsToDelta: (yxml, events) => {
-      const ytext = yxml.getAttribute('ytext')
-      const ytextevent = events.find(event => event.target === ytext)
-      if (ytextevent) {
-        return ytextevent.delta
-      }
-      return {}
-    },
-    typeToDelta: (yxml) => {
-      return yxml.getAttribute('ytext').toDelta()
-    }
-  }
+  'table-embed': tableEmbed
 }
-
-Delta.registerEmbed('delta', {
-  compose: (a, b) => new Delta(a).compose(new Delta(b)).ops,
-  transform: (a, b, priority) =>
-    new Delta(a).transform(new Delta(b), priority).ops,
-  invert: (a, b) => new Delta(a).invert(new Delta(b)).ops
-})
 
 /**
  * @param {any} [y]
@@ -155,14 +139,157 @@ const createQuillEditor = (y = new Y.Doc()) => {
   }
 }
 
-export const testCustomEmbedBasic = () => {
+export const testBasic = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)
   const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
-  editor.updateContents([{ insert: { delta: [{ insert: 'failed test' }] } }])
-  editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
+
+  editor.updateContents([{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '11111111' }, attributes: { height: 20 } }
+        ],
+        columns: [
+          { insert: { id: '22222222' } },
+          { insert: { id: '33333333' }, attributes: { width: 30 } },
+          { insert: { id: '44444444' } }
+        ],
+        cells: {
+          '1:2': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
   console.log('contents: ', editor.getContents().ops[0])
-  t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
+  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  console.log('editor.contents', editor.getContents().ops)
+  console.log('type.toJSON()', type.toDelta())
+  t.compare(type.toDelta(), type2.toDelta())
+}
+
+export const testComposeAddARow = () => {
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '11111111' }, attributes: { height: 20 } }
+        ],
+        columns: [
+          { insert: { id: '22222222' } },
+          { insert: { id: '33333333' }, attributes: { width: 30 } },
+          { insert: { id: '44444444' } }
+        ],
+        cells: {
+          '1:2': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
+  editor.updateContents([{
+    retain: { 'table-embed': { rows: [{ insert: { id: '55555555' } }] } }
+  }])
+  const editorDelta = normQuillDelta(editor.getContents().ops)
+  console.log(editorDelta)
+  t.compare(editorDelta, [{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '55555555' } },
+          { insert: { id: '11111111' }, attributes: { height: 20 } }
+        ],
+        columns: [
+          { insert: { id: '22222222' } },
+          { insert: { id: '33333333' }, attributes: { width: 30 } },
+          { insert: { id: '44444444' } }
+        ],
+        cells: {
+          '2:2': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
+  console.log('contents: ', editor.getContents().ops[0])
+  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  console.log('editor.contents', editor.getContents().ops)
+  console.log('type.toJSON()', type.toDelta())
+  t.compare(type.toDelta(), type2.toDelta())
+}
+
+export const testAddsTwoRows = () => {
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '11111111' }, attributes: { height: 20 } }
+        ],
+        columns: [
+          { insert: { id: '22222222' } },
+          { insert: { id: '33333333' }, attributes: { width: 30 } },
+          { insert: { id: '44444444' } }
+        ],
+        cells: {
+          '1:2': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
+  editor.updateContents([{
+    retain: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '55555555' } },
+          { insert: { id: '66666666' } }
+        ]
+      }
+    }
+  }])
+  const editorDelta = normQuillDelta(editor.getContents().ops)
+  console.log(editorDelta)
+  t.compare(editorDelta, [{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: '55555555' } },
+          { insert: { id: '66666666' } },
+          { insert: { id: '11111111' }, attributes: { height: 20 } }
+        ],
+        columns: [
+          { insert: { id: '22222222' } },
+          { insert: { id: '33333333' }, attributes: { width: 30 } },
+          { insert: { id: '44444444' } }
+        ],
+        cells: {
+          '3:2': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
+  console.log('contents: ', editor.getContents().ops[0])
+  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
   console.log('editor.contents', editor.getContents().ops)
   console.log('type.toJSON()', type.toDelta())
