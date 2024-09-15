@@ -11,6 +11,10 @@ import Delta from 'quill-delta'
  */
 
 /**
+ * @typedef {Array<import('quill-delta').Op>} DeltaOps
+ */
+
+/**
  * Removes the pending '\n's if it has no attributes.
  *
  * @param {any} delta
@@ -37,6 +41,10 @@ export const normQuillDelta = delta => {
 
 /**
  * @param {any} quillCursors
+ * @param {any} aw
+ * @param {number} clientId
+ * @param {Y.Doc} doc
+ * @param {Y.Text} type
  */
 const updateCursor = (quillCursors, aw, clientId, doc, type) => {
   try {
@@ -106,8 +114,14 @@ export class QuillBinding {
     const quillCursors = quill.getModule('cursors') || null
     this.quillCursors = quillCursors
     // This object contains all attributes used in the quill instance
+    /**
+     * @type {Record<string,any>}
+     */
     this._negatedUsedFormats = {}
     this.awareness = awareness
+    /**
+     * @param {{ added: Array<number>, removed: Array<number>, updated: Array<number> }} change
+     */
     this._awarenessChange = ({ added, removed, updated }) => {
       const states = /** @type {Awareness} */ (awareness).getStates()
       added.forEach(id => {
@@ -121,7 +135,7 @@ export class QuillBinding {
       })
     }
     /**
-     * @param {Array<Y.YEvent>} _events
+     * @param {Array<Y.YEvent<any>>} _events
      * @param {Y.Transaction} tr
      */
     this._typeObserver = (_events, tr) => {
@@ -140,7 +154,7 @@ export class QuillBinding {
           }
         })
         /**
-         * @type {Array<{ retain: number } | { retain: object }>}
+         * @type {Array<{ retain: number } | { retain: Record<string,any>}>}
          */
         const embedEventOps = []
         if (embedEvents.size > 0) {
@@ -219,7 +233,7 @@ export class QuillBinding {
     type.observeDeep(this._typeObserver)
     /**
      * @param {any} _eventType
-     * @param {any} delta
+     * @param {{ ops: DeltaOps }} delta
      * @param {any} _state
      * @param {any} origin
      */
@@ -241,7 +255,7 @@ export class QuillBinding {
           }
           const potentialCustomEmbed = (op.retain != null && typeof op.retain === 'object') ? op.retain : (op.insert != null && typeof op.insert === 'object' ? op.insert : null)
           if (potentialCustomEmbed) {
-            const embed = embeds[object.keys(op.retain ?? op.insert)[0]]
+            const embed = embeds[object.keys(/** @type {Record<string,any>} */ (op.retain ?? op.insert))[0]]
             if (embed != null) {
               embedChanges.push(op)
               if (op.retain != null) {
@@ -253,7 +267,7 @@ export class QuillBinding {
           } else if (op.retain != null) {
             embedChanges.retain(op.retain)
           } else if (op.insert != null) {
-            embedChanges.retain(op.insert.length)
+            embedChanges.retain(/** @type {string} */ (op.insert).length)
           }
           changes.push(op)
         })
@@ -282,15 +296,15 @@ export class QuillBinding {
                 const embedDef = embeds[embedName]
                 const yembed = new Y.XmlElement(embedName)
                 type.insertEmbed(index, yembed)
-                embedDef.update(yembed, op.insert[embedName])
+                embedDef.update(yembed, /** @type {Record<string,any>} */ (op.insert)[embedName])
                 forward(1)
               } else if (op.retain) {
                 const yembedType = /** @type {any} */ (item?.content).type
                 if (yembedType instanceof Y.XmlElement) {
                   const embedName = yembedType.nodeName
                   const embedDef = embeds[embedName]
-                  if (embedDef != null && op.retain[embedName] != null) {
-                    embedDef.update(yembedType, op.retain[embedName])
+                  if (embedDef != null && /** @type {Record<string,any>} */ (op.retain)[embedName] != null) {
+                    embedDef.update(yembedType, /** @type {Record<string,any>} */ (op.retain)[embedName])
                   } else {
                     console.warn(`expected embed type "${embedName}"`)
                   }

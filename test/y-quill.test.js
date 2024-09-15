@@ -42,9 +42,9 @@ class DeltaBlot extends BlockEmbed {
   }
 
   /**
-   * @param {HTMLElement} domNode
+   * @param {HTMLElement} _domNode
    */
-  static formats (domNode) {
+  static formats (_domNode) {
     return undefined
   }
 

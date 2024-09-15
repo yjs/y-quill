@@ -1,143 +1,198 @@
 import * as t from 'lib0/testing.js'
-import * as prng from 'lib0/prng.js'
-import * as math from 'lib0/math.js'
 import * as object from 'lib0/object'
 import * as Y from 'yjs'
-import { applyRandomTests } from 'yjs/testHelper'
+import * as prng from 'lib0/prng'
+import { createQuillEditor } from './utils.js'
+
 import Delta from 'quill-delta'
-
-import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
-import Quill from 'quill'
-
-import { tableEmbed } from '../embeds/table-embed.js'
-import TableEmbed from 'quill/modules/tableEmbed.js'
-
-const Parchment = Quill.import('parchment')
-const BlockEmbed = Quill.import('blots/block/embed')
-TableEmbed.register()
+import TableEmbed from '../../src/modules/tableEmbed.js'
+import { beforeAll, describe, expect, test } from 'vitest'
 
 /**
- * @typedef {Array<DeltaOp>} DeltaOps
- */
-/**
- * @typedef {{ insert: string, attributes: object? }|{ retain: number, attributes: object }|{ delete: number }} DeltaOp
+ * @typedef {Array<import('quill-delta').Op>} Delta
  */
 
 /**
- * @type {Object} TableDocument
- * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.rows
- * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.columns
- * @property {{ [key:string]: { content: DeltaOps, attributes: any } }} TableDocument.cells
+ * @param {t.TestCase} t
  */
+const getRandomRowColumnId = t => {
+  const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  return new Array(8)
+    .fill(0)
+    .map(() => characters.charAt(prng.int31(t.prng, 0, characters.length - 1)))
+    .join('')
+}
 
 /**
- * Just for testing. Doesn't render anything anything.
+ * @param {any} obj
+ * @param {t.TestCase} t
+ * @return {any}
  */
-class TableBlot extends BlockEmbed {
-  static tagName = 'DIV'
-  static blotName = 'table-embed'
-
-  constructor (scroll, node, value) {
-    super(scroll, node)
-    /**
-     * @type {TableDocument}
-     */
-    this.d = value
-  }
-
-  static create (value) {
-    /**
-     * @type {HTMLElement}
-     */
-    return super.create(value)
-  }
-
-  delta () {
-    return new Delta([{ insert: { 'table-embed': this.d } }])
-  }
-
+const attachAttributes = (obj, t) => {
   /**
-   * @return {HTMLElement}
+   * @param {t.TestCase} t
    */
-  static value (_domNode) {
-    throw new Error('unexpected case')
+  const getRandomAttributes = (t) => {
+    const attributeCount = prng.oneOf(t.prng, [1, 4, 8])
+    const allowedAttributes = ['align', 'background', 'color', 'font']
+    const allowedValues = ['center', 'red', 'left', 'uppercase']
+    const attributes = {}
+    new Array(attributeCount).fill(0).forEach(() => {
+      attributes[prng.oneOf(t.prng, allowedAttributes)] = prng.oneOf(t.prng, allowedValues)
+    })
+    return attributes
   }
-
-  /**
-   * @param {HTMLElement} _domNode
-   */
-  static formats (_domNode) {
-    return undefined
+  if (prng.bool(t.prng)) {
+    // @ts-expect-error
+    obj.attributes = getRandomAttributes(t)
   }
+  // @ts-expect-error
+  return obj
+}
 
-  updateContent (change) {
-    const start = new Delta([{ insert: { 'table-embed': this.d } }])
-    const composed = start.compose(new Delta([{ retain: { 'table-embed': change } }]))
-    this.d = composed.ops[0].insert['table-embed']
-  }
+/**
+ * @param {t.TestCase} t
+ */
+const getRandomCellContent = () => {
+  const opCount = prng.oneOf(t.prng, [1, 2, 3])
+  const delta = new Delta()
+  new Array(opCount).fill(0).forEach(() => {
+    delta.push(
+      attachAttributes({
+        insert: new Array(prng.int31(t.prng, 1, 11))
+          .fill(0)
+          .map(() => prng.oneOf(t.prng, ['a', 'b', 'c', 'c', 'e', 'f', 'g']))
+          .join('')
+      }, t)
+    )
+  })
+  return delta.ops
+}
 
-  /**
-   * @param {string} name
-   * @param {string} value
-   */
-  format (name, value) {
-    if (name === 'alt') {
-      this.domNode.setAttribute(name, value)
-    } else {
-      super.format(name, value)
+/**
+ * @param {Delta} base
+ */
+const getRandomChange = base => {
+  const table = {}
+  const dimension = {
+    rows: new Delta(
+      base.ops[0].insert['table-embed'].rows || []
+    ).length(),
+    columns: new Delta(
+      base.ops[0].insert['table-embed'].columns || []
+    ).length()
+  };
+  ['rows', 'columns'].forEach((field) => {
+    const baseLength = dimension[field]
+    const action = prng.oneOf(t.prng, ['insert', 'delete', 'retain'])
+    const delta = new Delta()
+    switch (action) {
+      case 'insert':
+        delta.retain(prng.int31(t.prng, 0, baseLength + 1))
+        delta.push(
+          attachAttributes({ insert: { id: getRandomRowColumnId(t) } }, t)
+        )
+        break
+      case 'delete':
+        if (baseLength >= 1) {
+          delta.retain(prng.int31(t.prng, 0, baseLength))
+          delta.delete(1)
+        }
+        break
+      case 'retain':
+        if (baseLength >= 1) {
+          delta.retain(prng.int31(t.prng, 0, baseLength))
+          delta.push(attachAttributes({ retain: 1 }, t))
+        }
+        break
+      default:
+        break
     }
+    if (delta.length() > 0) {
+      table[field] = delta.ops
+    }
+  })
+
+  const updateCellCount = prng.oneOf(t.prng, [0, 1, 2, 3])
+  new Array(updateCellCount).fill(0).forEach(() => {
+    const row = prng.int31(t.prng, 0, dimension.rows)
+    const column = prng.int31(t.prng, 0, dimension.columns)
+    const cellIdentityToModify = `${row + 1}:${column + 1}`
+    table.cells = {
+      [cellIdentityToModify]: attachAttributes({
+        content: getRandomCellContent(t)
+      }, t)
+    }
+  })
+  return new Delta([attachAttributes({ retain: { 'table-embed': table } }, t)])
+}
+
+/**
+ * @param {number} count
+ * @param {t.TestCase} t
+ */
+const getRandomRowColumnInsert = (count, t) => {
+  return new Array(count)
+    .fill(0)
+    .map(() =>
+      attachAttributes({ insert: { id: getRandomRowColumnId(t) } }, t)
+    )
+}
+
+/**
+ * @param {t.TestCase} t
+ */
+const getRandomBase = (t) => {
+  const rowCount = prng.oneOf(t.prng, [0, 1, 2, 3])
+  const columnCount = prng.oneOf(t.prng, [0, 1, 2])
+  const cellCount = prng.oneOf(t.prng, [0, 1, 2, 3, 4, 5])
+
+  const table = {}
+  if (rowCount) table.rows = getRandomRowColumnInsert(rowCount, t)
+  if (columnCount) table.columns = getRandomRowColumnInsert(columnCount, t)
+  if (cellCount) {
+    const cells = {}
+    new Array(cellCount).fill(0).forEach(() => {
+      const row = prng.int31(t.prng, 0, rowCount)
+      const column = prng.int31(t.prng, 0, columnCount)
+      const identity = `${row + 1}:${column + 1}`
+      const cell = attachAttributes({}, t)
+      if (prng.bool(t.prng)) {
+        cell.content = getRandomCellContent()
+      }
+      if (Object.keys(cell).length) {
+        cells[identity] = cell
+      }
+    })
+    if (Object.keys(cells).length) table.cells = cells
   }
+  return new Delta([{ insert: { 'table-embed': table } }])
 }
 
-// Essential formats
-const Block = Quill.import('blots/block')
-const Break = Quill.import('blots/break')
-const Container = Quill.import('blots/container')
-const Cursor = Quill.import('blots/cursor')
-const Inline = Quill.import('blots/inline')
-const Scroll = Quill.import('blots/scroll')
-const Text = Quill.import('blots/text')
-const Image = Quill.import('formats/image')
+const runTestCase = () => {
+  const base = getRandomBase()
+  const change = getRandomChange(base)
+  expect(base).toEqual(base.compose(change).compose(change.invert(base)))
 
-const registry = new Parchment.Registry()
-registry.register(
-  Scroll,
-  Block,
-  Break,
-  Container,
-  Cursor,
-  Inline,
-  Text,
-  Image,
-  TableBlot
-)
-
-/**
- * @typedef {object} TestData
- * @property {Quill} TestData.editor
- * @property {QuillBinding} TestData.binding
- * @property {Y.Text} type
- */
-
-/**
- * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef }}
- */
-const embeds = {
-  'table-embed': tableEmbed
+  const anotherChange = getRandomChange(base)
+  expect(change.compose(change.transform(anotherChange, true))).toEqual(
+    anotherChange.compose(anotherChange.transform(change))
+  )
 }
 
-/**
- * @param {any} [y]
- * @return {TestData}
- */
-const createQuillEditor = (y = new Y.Doc()) => {
-  const type = y.getText('text')
-  const editor = new Quill(document.createElement('div'), { registry })
-  const binding = new QuillBinding(type, editor, undefined, { embeds })
-  return {
-    editor, binding, type
-  }
-}
+describe('tableEmbed', () => {
+  beforeAll(() => {
+    TableEmbed.register()
+  })
+
+  test('delta', () => {
+    for (let i = 0; i < 20; i += 1) {
+      for (let j = 0; j < 1000; j += 1) {
+        runTestCase()
+      }
+    }
+  })
+})
 
 export const testBasic = () => {
   const ydoc = new Y.Doc()

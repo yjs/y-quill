@@ -55,6 +55,15 @@ the custom deltas to Yjs transformations and how to translate Yjs
 transformations to custom deltas. This package already ships with a couple of
 custom deltas that might be useful. 
 
+### @Todo
+- [ ] fuzz test
+- [ ] random prng tests
+- [ ] fill out readme
+- [ ] reduce code duplication by introducing a utility package (at least for the
+      Custom Embeds)
+- [ ] remove todos
+- [ ] notify them
+
 #### Custom Delta: delta
 
 @todo!

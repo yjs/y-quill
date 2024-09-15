@@ -49,7 +49,7 @@ window.addEventListener('load', () => {
   */
 
   const connectBtn = document.getElementById('y-connect-btn')
-  connectBtn.addEventListener('click', () => {
+  connectBtn?.addEventListener('click', () => {
     if (provider.shouldConnect) {
       provider.disconnect()
       connectBtn.textContent = 'Connect'
