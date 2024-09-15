@@ -138,58 +138,55 @@ export const tableEmbed = {
      */
     const cells = {}
 
-    if (ycellsEvent) {
-      /**
-       * @param {Y.XmlText} yline
-       * @return {Map<string, number>}
-       */
-      const createMapping = (yline) => {
-        const mapping = new Map()
-        yline.toDelta().forEach((d, index) => {
-          mapping.set(d.insert.id, index + 1)
-        })
-        return mapping
-      }
-      const rowMap = createMapping(yrows)
-      const colMap = createMapping(ycolumns)
-      const cellIdToIndex = (id) => {
-        const [rowid, colid] = id.split(':')
-        const rowIndex = rowMap.get(rowid)
-        const colIndex = colMap.get(colid)
-        if (rowIndex != null && colIndex != null) {
-          return `${rowIndex}:${colIndex}`
-        } else {
-          ycells.delete(id)
-        }
-      }
-      ycellsEvent.changes.keys.forEach((changeType, key) => {
-        if (changeType.action === 'delete') {
-          cells[cellIdToIndex(key)] = null
-        } else {
-          const ycell = ycells.get(key)
-          cells[cellIdToIndex(key)] = {
-            content: ycell.toDelta(),
-            attributes: ycell.getAttributes()
-          }
-        }
+    /**
+     * @param {Y.XmlText} yline
+     * @return {Map<string, number>}
+     */
+    const createMapping = (yline) => {
+      const mapping = new Map()
+      yline.toDelta().forEach((d, index) => {
+        mapping.set(d.insert.id, index + 1)
       })
-      ycellEvents.forEach(ycellEvent => {
-        const cellId = ycellEvent.target._item.parentSub
-        const cellIndex = cellIdToIndex(cellId)
-        /**
-         * @type {Object<string,null|string>}
-         */
-        const attrChanges = {}
-        ycellEvent.keys.forEach((change, key) => {
-          attrChanges[key] = change.action === 'delete' ? null : ycellEvent.target.getAttribute(key)
-        })
-        cells[cellIndex] = {
-          content: ycellEvent.delta,
-          attributes: attrChanges
-        }
-      })
+      return mapping
     }
-
+    const rowMap = createMapping(yrows)
+    const colMap = createMapping(ycolumns)
+    const cellIdToIndex = (id) => {
+      const [rowid, colid] = id.split(':')
+      const rowIndex = rowMap.get(rowid)
+      const colIndex = colMap.get(colid)
+      if (rowIndex != null && colIndex != null) {
+        return `${rowIndex}:${colIndex}`
+      } else {
+        ycells.delete(id)
+      }
+    }
+    ycellsEvent?.changes.keys.forEach((changeType, key) => {
+      if (changeType.action === 'delete') {
+        cells[cellIdToIndex(key)] = null
+      } else {
+        const ycell = ycells.get(key)
+        cells[cellIdToIndex(key)] = {
+          content: ycell.toDelta(),
+          attributes: ycell.getAttributes()
+        }
+      }
+    })
+    ycellEvents?.forEach(ycellEvent => {
+      const cellId = ycellEvent.target._item.parentSub
+      const cellIndex = cellIdToIndex(cellId)
+      /**
+       * @type {Object<string,null|string>}
+       */
+      const attrChanges = {}
+      ycellEvent.keys.forEach((change, key) => {
+        attrChanges[key] = change.action === 'delete' ? null : ycellEvent.target.getAttribute(key)
+      })
+      cells[cellIndex] = {
+        content: ycellEvent.delta,
+        attributes: attrChanges
+      }
+    })
     const rows = ylineEventToDelta(yrowsEvent)
     const columns = ylineEventToDelta(ycolsEvent)
     return {
