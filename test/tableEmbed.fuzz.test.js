@@ -159,7 +159,6 @@ const getRandomBase = (gen) => {
   const rowCount = prng.oneOf(gen, [1, 2, 3])
   const columnCount = prng.oneOf(gen, [1, 2])
   const cellCount = prng.oneOf(gen, [0, 1, 2, 3, 4, 5])
-
   const table = {}
   if (rowCount) table.rows = getRandomRowColumnInsert(rowCount, gen)
   if (columnCount) table.columns = getRandomRowColumnInsert(columnCount, gen)
@@ -203,7 +202,6 @@ export const testBasic = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)
   const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
-
   editor.updateContents([{
     insert: {
       'table-embed': {

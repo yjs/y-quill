@@ -56,13 +56,13 @@ transformations to custom deltas. This package already ships with a couple of
 custom deltas that might be useful. 
 
 ### @Todo
-- [ ] fuzz test
-- [ ] random prng tests
+- [x] fuzz test
+- [x] random prng tests
 - [ ] fill out readme
-- [ ] reduce code duplication by introducing a utility package (at least for the
+- [x] reduce code duplication by introducing a utility package (at least for the
       Custom Embeds)
 - [ ] remove todos
-- [ ] notify them
+- [x] notify them
 
 #### Custom Delta: delta
 
