@@ -154,8 +154,14 @@ export const tableEmbed = {
      */
     const createMapping = (yline) => {
       const mapping = new Map()
-      yline.toDelta().forEach(/** @type {(d:any,index:number) => void} */ (d, index) => {
+      let index = 0
+      yline.toDelta().forEach(/** @type {(d:any,index:number) => void} */ (d) => {
+        const existingIndex = mapping.get(d.insert.id)
+        if (existingIndex != null) {
+          yline.delete(index, 1)
+        }
         mapping.set(d.insert.id, index + 1)
+        index++
       })
       return mapping
     }
@@ -235,21 +241,33 @@ export const tableEmbed = {
      * @param {Y.Text} ylist
      * @param {Map<string,number>} idMapping
      */
-    const yToLine = (ylist, idMapping) => ylist.toDelta().map(/** @type {(rowOrColumn:{insert: {id: string},attributes:any},index:number)=>void} */ (rowOrColumn, index) => {
-      // @todo cleanup dpulicate ids here. Also, use Y.map for row.insert!
-      const id = rowOrColumn.insert.id
-      idMapping.set(id, index + 1)
-      /**
+    const yToLine = (ylist, idMapping) => {
+      let index = 0
+      return /** @type {DeltaOps} */ (ylist.toDelta()).map((rowOrColumn) => {
+        if (typeof rowOrColumn.insert === 'string' || rowOrColumn.insert?.id == null) {
+          return null
+        }
+        const id = /** @type {string} */ (rowOrColumn.insert.id)
+        const existingIndex = idMapping.get(id)
+        if (existingIndex != null) {
+          // index already exists. Delete this one.
+          ylist.delete(index, 1)
+          return null
+        }
+        idMapping.set(id, index + 1)
+        /**
        * @type {any}
        */
-      const res = {
-        insert: { id }
-      }
-      if (rowOrColumn.attributes != null) {
-        res.attributes = rowOrColumn.attributes
-      }
-      return res
-    })
+        const res = {
+          insert: { id }
+        }
+        if (rowOrColumn.attributes != null) {
+          res.attributes = rowOrColumn.attributes
+        }
+        index++
+        return res
+      }).filter(x => x != null)
+    }
     const rows = yToLine(yrows, rowMap)
     const columns = yToLine(ycolumns, colMap)
     /**

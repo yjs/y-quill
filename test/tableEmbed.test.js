@@ -285,6 +285,67 @@ export const testDeletesAColumn = () => {
   t.compare(type.toDelta(), type2.toDelta())
 }
 
+export const testMoveColumn = () => {
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: 'a' } }
+        ],
+        columns: [
+          { insert: { id: 'b' } },
+          { insert: { id: 'c' } },
+          { insert: { id: 'd' } }
+        ],
+        cells: {
+          '1:1': {
+            content: [{ insert: 'Hello' }],
+            attributes: { align: 'center' }
+          }
+        }
+      }
+    }
+  }])
+  editor.updateContents([{
+    retain: {
+      'table-embed': {
+        columns: [{ delete: 1 }, { retain: 1 }, { insert: { id: 'b' } }]
+      }
+    }
+  }])
+  const editorDelta = normQuillDelta(editor.getContents().ops)
+  console.log(editorDelta)
+  t.compare(editorDelta, [{
+    insert: {
+      'table-embed': {
+        rows: [
+          { insert: { id: 'a' } }
+        ],
+        columns: [
+          { insert: { id: 'c' } },
+          { insert: { id: 'b' } },
+          { insert: { id: 'd' } }
+        ]
+        // Unfortunately, quill implicitly deletes cells when a column is moved
+        // cells: {
+        //   '1:2': {
+        //     content: [{ insert: 'Hello' }],
+        //     attributes: { align: 'center' }
+        //   }
+        // }
+      }
+    }
+  }])
+  console.log('contents: ', editor.getContents().ops[0])
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  console.log('editor.contents', editor.getContents().ops)
+  console.log('type.toJSON()', type.toDelta())
+  t.compare(type.toDelta(), type2.toDelta())
+}
+
 export const testRemoveACellAttribute = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)
