@@ -127,7 +127,6 @@ export const tableEmbed = {
    * @param {Array<Y.YEvent<any>>} events
    */
   eventsToDelta: (yxml, events) => {
-    // @todo important! make sure to cleanup duplicate row/col ids here!
     const ycells = /** @type {Y.Map<Y.XmlText>} */ (yxml.getAttribute('cells'))
     const yrows = /** @type {Y.XmlText} */ (yxml.getAttribute('rows'))
     const ycolumns = /** @type {Y.XmlText} */ (yxml.getAttribute('columns'))
