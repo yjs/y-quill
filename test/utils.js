@@ -7,6 +7,9 @@ import { tableEmbed } from '../embeds/table-embed.js'
 import TableEmbed from 'quill/modules/tableEmbed.js'
 
 const Parchment = Quill.import('parchment')
+/**
+ * @type {any}
+ */
 const BlockEmbed = Quill.import('blots/block/embed')
 TableEmbed.register()
 
@@ -18,7 +21,7 @@ TableEmbed.register()
  */
 
 /**
- * @type {Object} TableDocument
+ * @typedef {Object} TableDocument
  * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.rows
  * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.columns
  * @property {{ [key:string]: { content: DeltaOps, attributes: any } }} TableDocument.cells
@@ -31,6 +34,11 @@ class TableBlot extends BlockEmbed {
   static tagName = 'DIV'
   static blotName = 'table-embed'
 
+  /**
+   * @param {any} scroll
+   * @param {any} node
+   * @param {any} value
+   */
   constructor (scroll, node, value) {
     super(scroll, node)
     /**
@@ -39,6 +47,9 @@ class TableBlot extends BlockEmbed {
     this.d = value
   }
 
+  /**
+   * @param {any} value
+   */
   static create (value) {
     /**
      * @type {HTMLElement}
@@ -53,7 +64,7 @@ class TableBlot extends BlockEmbed {
   /**
    * @return {HTMLElement}
    */
-  static value (_domNode) {
+  static value () {
     throw new Error('unexpected case')
   }
 
@@ -64,10 +75,13 @@ class TableBlot extends BlockEmbed {
     return undefined
   }
 
+  /**
+   * @param {DeltaOps} change
+   */
   updateContent (change) {
     const start = new Delta([{ insert: { 'table-embed': this.d } }])
     const composed = start.compose(new Delta([{ retain: { 'table-embed': change } }]))
-    this.d = composed.ops[0].insert['table-embed']
+    this.d = /** @type {any} */ (composed).ops[0].insert['table-embed']
   }
 
   /**
@@ -87,6 +101,11 @@ class DeltaBlot extends BlockEmbed {
   static tagName = 'DIV'
   static blotName = 'delta'
 
+  /**
+   * @param {any} scroll
+   * @param {any} node
+   * @param {any} value
+   */
   constructor (scroll, node, value) {
     super(scroll, node)
     /**
@@ -95,6 +114,9 @@ class DeltaBlot extends BlockEmbed {
     this.d = new Delta(value)
   }
 
+  /**
+   * @param {any} value
+   */
   static create (value) {
     /**
      * @type {HTMLElement}
@@ -109,7 +131,7 @@ class DeltaBlot extends BlockEmbed {
   /**
    * @return {HTMLElement}
    */
-  static value (_domNode) {
+  static value () {
     throw new Error('unexpected case')
   }
 
@@ -120,6 +142,9 @@ class DeltaBlot extends BlockEmbed {
     return undefined
   }
 
+  /**
+   * @param {any} change
+   */
   updateContent (change) {
     this.d = this.d.compose(new Delta(change))
   }
@@ -138,13 +163,37 @@ class DeltaBlot extends BlockEmbed {
 }
 
 // Essential formats
+/**
+ * @type {any}
+ */
 const Block = Quill.import('blots/block')
+/**
+ * @type {any}
+ */
 const Break = Quill.import('blots/break')
+/**
+ * @type {any}
+ */
 const Container = Quill.import('blots/container')
+/**
+ * @type {any}
+ */
 const Cursor = Quill.import('blots/cursor')
+/**
+ * @type {any}
+ */
 const Inline = Quill.import('blots/inline')
+/**
+ * @type {any}
+ */
 const Scroll = Quill.import('blots/scroll')
+/**
+ * @type {any}
+ */
 const Text = Quill.import('blots/text')
+/**
+ * @type {any}
+ */
 const Image = Quill.import('formats/image')
 
 const registry = new Parchment.Registry()
@@ -157,8 +206,8 @@ registry.register(
   Inline,
   Text,
   Image,
-  TableBlot,
-  DeltaBlot
+  /** @type {any} */ (TableBlot),
+  /** @type {any} */ (DeltaBlot)
 )
 
 /**
@@ -176,35 +225,35 @@ Delta.registerEmbed('delta', {
 })
 
 /**
- * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef }}
+ * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef<any,any> }}
  */
 const embeds = {
   'table-embed': tableEmbed,
   delta: {
     /**
-     * @param {Y.XmlElement} yxml
-     * @param {Array<import('quill').DeltaOperation>} op
+     * @param {Y.XmlElement<{ ytext: Y.Text }>} yxml
+     * @param {DeltaOp} op
      */
     update: (yxml, op) => {
       if (!yxml.hasAttribute('ytext')) {
         yxml.setAttribute('ytext', new Y.Text())
       }
       const ytext = yxml.getAttribute('ytext')
-      ytext.applyDelta(op)
+      ytext?.applyDelta(op)
     },
 
     /**
      * @param {Y.XmlElement} yxml
-     * @param {Array<Y.YEvent>} events
-     * @return {Array<import('quill').DeltaOperation>}
+     * @param {Array<Y.YEvent<any>>} events
+     * @return {DeltaOps}
      */
     eventsToDelta: (yxml, events) => {
       const ytext = yxml.getAttribute('ytext')
       const ytextevent = events.find(event => event.target === ytext)
       if (ytextevent) {
-        return ytextevent.delta
+        return /** @type {any} */ (ytextevent.delta)
       }
-      return {}
+      return []
     },
     typeToDelta: (yxml) => {
       return yxml.getAttribute('ytext').toDelta()

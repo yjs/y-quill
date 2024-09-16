@@ -18,9 +18,10 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "y-quill": ["./src/y-quill.js"]
+      "y-quill": ["./src/y-quill.js"],
+      "yjs/testHelper": ["./node_modules/yjs/tests/testHelper.js"]
     }
   },
-  "include": ["./src/**/*.js", "./tests/**/*.js", "./demo/**/*.js"],
+  "include": ["./src/**/*.js", "./test/**/*.js", "./demo/**/*.js", "./embeds/**/*.js"],
   "exclude": ["./dist", "./node_modules"]
 }

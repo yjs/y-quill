@@ -5,47 +5,63 @@ import * as error from 'lib0/error'
 import * as number from 'lib0/number'
 
 /**
+ * @typedef {import('quill-delta').Op} DeltaOp
+ */
+
+/**
  * @typedef {Array<DeltaOp>} DeltaOps
  */
 
 /**
- * @typedef {{ insert: string, attributes: object? }|{ retain: number, attributes: object }|{ delete: number }} DeltaOp
- */
-
-/**
- * @type {Object} TableDocument
+ * @typedef {Object} TableDocument
  * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.rows
  * @property {Array<{ insert: { id: string }, attributes: any }>} TableDocument.columns
  * @property {{ [key:string]: { content: DeltaOps, attributes: any } }} TableDocument.cells
  */
 
 /**
- * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef }}
+ * @typedef {Y.XmlElement<{ cells: Y.Map<Y.XmlText>, rows: Y.XmlText, columns: Y.XmlText }>} YTableXmlType
+ */
+
+/**
+ * @param {Y.Text} ycell
+ */
+const ycellToDelta = (ycell) => {
+  const attributes = ycell.getAttributes()
+  /**
+   * @type {any}
+   */
+  const res = {
+    content: ycell.toDelta(),
+    attributes
+  }
+  if (object.isEmpty(attributes)) {
+    delete res.attributes
+  }
+  if (res.content.length === 0) {
+    delete res.content
+  }
+  return res
+}
+
+/**
+ * @type {import('y-quill').EmbedDef<any, any>}
  */
 export const tableEmbed = {
 /**
-   * @param {Y.XmlElement} yxml
+   * @param {YTableXmlType} yxmlTable
    * @param {TableDocument} op
+   * @param {import('y-quill').QuillBinding} _binding
    */
-  update: (yxml, op) => {
-    if (!yxml.hasAttribute('cells')) {
-      yxml.setAttribute('cells', new Y.Map())
-      yxml.setAttribute('rows', new Y.XmlText())
-      yxml.setAttribute('columns', new Y.XmlText())
+  update: (yxmlTable, op, _binding) => {
+    if (!yxmlTable.hasAttribute('cells')) {
+      yxmlTable.setAttribute('cells', new Y.Map())
+      yxmlTable.setAttribute('rows', new Y.XmlText())
+      yxmlTable.setAttribute('columns', new Y.XmlText())
     }
-    /**
-     * @type {Y.Map<Y.XmlText>}
-     */
-    const ycells = yxml.getAttribute('cells')
-    /**
-     * @type {Y.XmlText}
-     */
-    const yrows = yxml.getAttribute('rows')
-    /**
-     * @type {Y.XmlText}
-     */
-    const ycolumns = yxml.getAttribute('columns')
-
+    const ycells = /** @type {Y.Map<Y.XmlText>} */ (yxmlTable.getAttribute('cells'))
+    const yrows = /** @type {Y.XmlText} */ (yxmlTable.getAttribute('rows'))
+    const ycolumns = /** @type {Y.XmlText} */ (yxmlTable.getAttribute('columns'))
     /**
      * @type {Array<string>}
      */
@@ -54,21 +70,20 @@ export const tableEmbed = {
      * @type {Array<string>}
      */
     const colIndexMap = []
-
     /**
-     * @param {Array<{ insert: { id: string }, attributes: any }|{ retain: number, attributes: any }|{ delete: number }>} changes
+     * @param {DeltaOps} changes
      * @param {Y.Text} yline
      * @param {Array<string>} mapping
      */
     const applyLineChange = (changes, yline, mapping) => {
       changes = changes.map(change => {
-        if (change.insert != null && change.insert.id == null) {
+        if (change.insert != null && /** @type {any} */ (change).insert.id == null) {
           return { insert: object.assign({ id: random.uuidv4() }, change.insert), attributes: change.attributes || {} }
         }
         return change
       })
       yline.applyDelta(changes)
-      yline.toDelta().forEach(d => {
+      yline.toDelta().forEach(/** @param {{ insert: { id: string }} }  d */ d => {
         if (d.insert == null || d.insert.id == null) error.unexpectedCase()
         mapping.push(d.insert.id)
       })
@@ -76,65 +91,60 @@ export const tableEmbed = {
     applyLineChange(op.rows || [], yrows, rowIndexMap)
     applyLineChange(op.columns || [], ycolumns, colIndexMap)
 
+    /**
+     * @param {Y.XmlText} _yline
+     * @param {number} index
+     * @param {Array<string>} mapping
+     * @param {'rows'|'columns'} lineName
+     * @return {string}
+     */
+    const ensureLineId = (_yline, index, mapping, lineName) => {
+      const id = mapping[index]
+      if (id != null) return id
+      throw new Error(`Cell doesn't belong to a ${lineName}. Must insert ${lineName} with id.`)
+    }
+
     object.forEach(op.cells || {}, (cellChange, cellid) => {
       const [rownum, colnum] = cellid.split(':').map(n => number.parseInt(n) - 1)
-      const rowid = rowIndexMap[rownum]
-      const colid = colIndexMap[colnum]
-      if (rowid != null && colid != null) {
-        const ycellid = `${rowid}:${colid}`
-        const ycell = ycells.get(ycellid) || ycells.set(ycellid, new Y.Text())
-        object.forEach(cellChange.attributes || {}, (attrChange, attrKey) => {
-          if (attrChange === null) {
-            ycell.removeAttribute(attrKey)
-          } else {
-            ycell.setAttribute(attrKey, attrChange)
-          }
-        })
-        if (cellChange.content != null) {
-          ycell.applyDelta(cellChange.content)
+      const rowid = ensureLineId(yrows, rownum, rowIndexMap, 'rows')
+      const colid = ensureLineId(ycolumns, colnum, colIndexMap, 'columns')
+      const ycellid = `${rowid}:${colid}`
+      const ycell = ycells.get(ycellid) || ycells.set(ycellid, new Y.XmlText())
+      object.forEach(cellChange.attributes || {}, (attrChange, attrKey) => {
+        if (attrChange === null) {
+          ycell.removeAttribute(attrKey)
+        } else {
+          ycell.setAttribute(attrKey, attrChange)
         }
-      } else {
-        // can't find index, the user probably inserted an invalid delta
-        error.unexpectedCase()
+      })
+      if (cellChange.content != null) {
+        ycell.applyDelta(cellChange.content)
       }
     })
   },
   /**
-   * @param {Y.XmlElement} yxml
-   * @param {Array<Y.YEvent>} events
-   * @return {Array<import('quill').DeltaOperation>}
+   * @param {YTableXmlType} yxml
+   * @param {Array<Y.YEvent<any>>} events
    */
   eventsToDelta: (yxml, events) => {
     // @todo important! make sure to cleanup duplicate row/col ids here!
-    /**
-     * @type {Y.Map<Y.XmlText>}
-     */
-    const ycells = yxml.getAttribute('cells')
-    /**
-     * @type {Y.XmlText}
-     */
-    const yrows = yxml.getAttribute('rows')
-    /**
-     * @type {Y.XmlText}
-     */
-    const ycolumns = yxml.getAttribute('columns')
+    const ycells = /** @type {Y.Map<Y.XmlText>} */ (yxml.getAttribute('cells'))
+    const yrows = /** @type {Y.XmlText} */ (yxml.getAttribute('rows'))
+    const ycolumns = /** @type {Y.XmlText} */ (yxml.getAttribute('columns'))
     const ycellsEvent = events.find(event => event.target === ycells)
-    /**
-     * @type {Array<Y.YXmlEvent>}
-     */
-    const ycellEvents = events.filter(event => event.target?.parent === ycells)
-    const yrowsEvent = events.find(event => event.target === yrows)
-    const ycolsEvent = events.find(event => event.target === ycolumns)
+    const ycellEvents = /** @type {Array<Y.YXmlEvent>} */ (events.filter(event => event.target?.parent === ycells))
+    const yrowsEvent = /** @type {Y.YXmlEvent} */ (events.find(event => event.target === yrows))
+    const ycolsEvent = /** @type {Y.YXmlEvent} */ (events.find(event => event.target === ycolumns))
 
     /**
-     * @param {Y.YXmlEvent || null} ylineEvent
+     * @param {Y.YXmlEvent|undefined} ylineEvent
      */
     const ylineEventToDelta = (ylineEvent) => {
       return ylineEvent != null ? ylineEvent.delta : []
     }
 
     /**
-     * @type {{ [k:string]: { content: any, attributes: any } }}
+     * @type {{ [k:string]: { content: any, attributes?: any } | null }}
      */
     const cells = {}
 
@@ -144,13 +154,16 @@ export const tableEmbed = {
      */
     const createMapping = (yline) => {
       const mapping = new Map()
-      yline.toDelta().forEach((d, index) => {
+      yline.toDelta().forEach(/** @type {(d:any,index:number) => void} */ (d, index) => {
         mapping.set(d.insert.id, index + 1)
       })
       return mapping
     }
     const rowMap = createMapping(yrows)
     const colMap = createMapping(ycolumns)
+    /**
+     * @param {string} id
+     */
     const cellIdToIndex = (id) => {
       const [rowid, colid] = id.split(':')
       const rowIndex = rowMap.get(rowid)
@@ -159,28 +172,24 @@ export const tableEmbed = {
         return `${rowIndex}:${colIndex}`
       } else {
         ycells.delete(id)
+        return 'undefined'
       }
     }
     ycellsEvent?.changes.keys.forEach((changeType, key) => {
-      if (changeType.action === 'delete') {
-        cells[cellIdToIndex(key)] = null
-      } else {
-        const ycell = ycells.get(key)
-        cells[cellIdToIndex(key)] = {
-          content: ycell.toDelta(),
-          attributes: ycell.getAttributes()
-        }
+      if (changeType.action !== 'delete') {
+        const ycell = /** @type {Y.XmlText} */ (ycells.get(key))
+        cells[cellIdToIndex(key)] = ycellToDelta(ycell)
       }
     })
     ycellEvents?.forEach(ycellEvent => {
-      const cellId = ycellEvent.target._item.parentSub
+      const cellId = /** @type {string} */ (/** @type {Y.Item} */ (ycellEvent.target._item).parentSub)
       const cellIndex = cellIdToIndex(cellId)
       /**
        * @type {Object<string,null|string>}
        */
       const attrChanges = {}
       ycellEvent.keys.forEach((change, key) => {
-        attrChanges[key] = change.action === 'delete' ? null : ycellEvent.target.getAttribute(key)
+        attrChanges[key] = change.action === 'delete' ? null : /** @type {Y.XmlText} */ (ycellEvent.target).getAttribute(key)
       })
       cells[cellIndex] = {
         content: ycellEvent.delta,
@@ -189,9 +198,17 @@ export const tableEmbed = {
     })
     const rows = ylineEventToDelta(yrowsEvent)
     const columns = ylineEventToDelta(ycolsEvent)
-    return {
+    delete cells.undefined
+    /**
+     * @type {any}
+     */
+    const res = {
       rows, columns, cells
     }
+    if (object.isEmpty(cells)) delete res.cells
+    if (res.rows.length === 0) delete res.rows
+    if (res.columns.length === 0) delete res.columns
+    return res
   },
   typeToDelta: (yxml) => {
     /**
@@ -218,10 +235,13 @@ export const tableEmbed = {
      * @param {Y.Text} ylist
      * @param {Map<string,number>} idMapping
      */
-    const yToLine = (ylist, mapping) => ylist.toDelta().map((rowOrColumn, index) => {
+    const yToLine = (ylist, idMapping) => ylist.toDelta().map(/** @type {(rowOrColumn:{insert: {id: string},attributes:any},index:number)=>void} */ (rowOrColumn, index) => {
       // @todo cleanup dpulicate ids here. Also, use Y.map for row.insert!
       const id = rowOrColumn.insert.id
-      mapping.set(id, index + 1)
+      idMapping.set(id, index + 1)
+      /**
+       * @type {any}
+       */
       const res = {
         insert: { id }
       }
@@ -232,6 +252,9 @@ export const tableEmbed = {
     })
     const rows = yToLine(yrows, rowMap)
     const columns = yToLine(ycolumns, colMap)
+    /**
+     * @type {Record<string,any>}
+     */
     const cells = {}
     /**
      * @type Array<string>
@@ -242,23 +265,27 @@ export const tableEmbed = {
       const rownum = rowMap.get(rowid)
       const colnum = colMap.get(colid)
       if (rownum != null && colnum != null) {
-        cells[`${rownum}:${colnum}`] = {
-          content: cell.toDelta(),
-          attributes: cell.getAttributes()
-        }
+        cells[`${rownum}:${colnum}`] = ycellToDelta(cell)
       } else {
         cellsToDelete.push(key)
       }
     })
     if (cellsToDelete.length > 0) {
-      ycells.doc.transact(() => {
+      /** @type {Y.Doc} */ (ycells.doc).transact(() => {
         cellsToDelete.forEach(k => {
           ycells.delete(k)
         })
       })
     }
-    return {
+    /**
+     * @type {any}
+     */
+    const res = {
       rows, columns, cells
     }
+    if (object.isEmpty(cells)) delete res.cells
+    if (columns.length === 0) delete res.columns
+    if (rows.length === 0) delete res.rows
+    return res
   }
 }

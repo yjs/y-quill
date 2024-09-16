@@ -71,7 +71,7 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
  * @template {Y.XmlElement} YType
  *
  * @typedef {Object} EmbedDef
- * @property {(a:YType,b:EmbedDelta)=>YType} EmbedDef.update
+ * @property {(a:YType,b:EmbedDelta,binding:import('y-quill').QuillBinding)=>YType} EmbedDef.update
  * @property {(src:YType,events:Array<Y.YXmlEvent>)=>EmbedDelta} EmbedDef.eventsToDelta
  * @property {(src:YType)=>EmbedDelta} EmbedDef.typeToDelta
  */
@@ -296,7 +296,7 @@ export class QuillBinding {
                 const embedDef = embeds[embedName]
                 const yembed = new Y.XmlElement(embedName)
                 type.insertEmbed(index, yembed)
-                embedDef.update(yembed, /** @type {Record<string,any>} */ (op.insert)[embedName])
+                embedDef.update(yembed, /** @type {Record<string,any>} */ (op.insert)[embedName], this)
                 forward(1)
               } else if (op.retain) {
                 const yembedType = /** @type {any} */ (item?.content).type
@@ -304,7 +304,7 @@ export class QuillBinding {
                   const embedName = yembedType.nodeName
                   const embedDef = embeds[embedName]
                   if (embedDef != null && /** @type {Record<string,any>} */ (op.retain)[embedName] != null) {
-                    embedDef.update(yembedType, /** @type {Record<string,any>} */ (op.retain)[embedName])
+                    embedDef.update(yembedType, /** @type {Record<string,any>} */ (op.retain)[embedName], this)
                   } else {
                     console.warn(`expected embed type "${embedName}"`)
                   }

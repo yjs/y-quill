@@ -1,11 +1,16 @@
 import * as t from 'lib0/testing.js'
 import * as prng from 'lib0/prng.js'
 import * as math from 'lib0/math.js'
+// @ts-ignore
 import { applyRandomTests } from 'yjs/testHelper'
 import Delta from 'quill-delta'
 import { createQuillEditor } from './utils.js'
-
 import { normQuillDelta } from '../src/y-quill.js'
+import * as Y from 'yjs' // eslint-disable-line
+
+/**
+ * @typedef {import('./utils.js').TestData} TestData
+ */
 
 let charCounter = 0
 
@@ -29,7 +34,7 @@ const qChanges = [
     const insertPos = prng.int32(gen, 0, p.editor.getText().length)
     const attrs = prng.oneOf(gen, marksChoices)
     const text = charCounter++ + prng.word(gen, 1, 2)
-    p.editor.insertText(insertPos, text, attrs)
+    p.editor.updateContents(new Delta().retain(insertPos).insert(text, attrs))
   },
   /**
    * @param {Y.Doc} _y
@@ -53,7 +58,7 @@ const qChanges = [
     let index = 0
     p.editor.getContents().forEach(op => {
       if (op.insert != null && typeof op.insert === 'object' && op.insert.delta != null) {
-        const len = new Delta(op.insert.delta).length()
+        const len = new Delta(/** @type {any} */ (op.insert).delta).length()
         customEmbeds.push({ len, index })
       }
       index += Delta.Op.length(op)
@@ -85,11 +90,11 @@ const qChanges = [
 ]
 
 /**
- * @param {any} result
+ * @param {{ testObjects: Array<TestData> }} result
  */
 const checkResult = result => {
   // all "delta" custom embeds are transformed to Y.XmlElements
-  t.assert(result.testObjects[0].type.toDelta().every(d => {
+  t.assert(result.testObjects[0].type.toDelta().every(/** @param {any} d */ d => {
     return d.insert == null || d.insert.delta == null
   }))
   for (let i = 1; i < result.testObjects.length; i++) {

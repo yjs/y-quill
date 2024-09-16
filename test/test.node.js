@@ -21,6 +21,7 @@ global.innerHeight = 0
   'MutationObserver',
   'Element'
 ].forEach(name => {
+  // @ts-ignore
   global[name] = window[name]
 })
 

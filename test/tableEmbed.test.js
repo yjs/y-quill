@@ -3,12 +3,17 @@ import * as prng from 'lib0/prng.js'
 import * as math from 'lib0/math.js'
 import * as object from 'lib0/object'
 import * as Y from 'yjs'
+// @ts-ignore
 import { applyRandomTests } from 'yjs/testHelper'
 import Delta from 'quill-delta'
 
 import { normQuillDelta } from 'y-quill'
 
 import { createQuillEditor } from './utils.js'
+
+/**
+ * @typedef {import('./utils.js').TestData} TestData
+ */
 
 export const testBasic = () => {
   const ydoc = new Y.Doc()
@@ -36,7 +41,7 @@ export const testBasic = () => {
     }
   }])
   console.log('contents: ', editor.getContents().ops[0])
-  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
+  t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
   console.log('editor.contents', editor.getContents().ops)
   console.log('type.toJSON()', type.toDelta())
@@ -94,7 +99,7 @@ export const testComposeAddARow = () => {
     }
   }])
   console.log('contents: ', editor.getContents().ops[0])
-  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
+  t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
   console.log('editor.contents', editor.getContents().ops)
   console.log('type.toJSON()', type.toDelta())
@@ -160,7 +165,7 @@ export const testAddsTwoRows = () => {
     }
   }])
   console.log('contents: ', editor.getContents().ops[0])
-  t.compare(object.size(editor.getContents().ops[0].insert['table-embed'].cells), 1)
+  t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
   console.log('editor.contents', editor.getContents().ops)
   console.log('type.toJSON()', type.toDelta())
@@ -335,8 +340,11 @@ export const testRemoveACellAttribute = () => {
 
 let charCounter = 0
 
+/**
+ * @type {Array<Record<string,any>>}
+ */
 const marksChoices = [
-  undefined,
+  /** @type {any} */ (undefined),
   { bold: true },
   { italic: true },
   { italic: true, color: '#888' }
@@ -388,7 +396,7 @@ const qChanges = [
     let index = 0
     p.editor.getContents().forEach(op => {
       if (op.insert != null && typeof op.insert === 'object' && op.insert.delta != null) {
-        const len = new Delta(op.insert.delta).length()
+        const len = new Delta(/** @type {any} */ (op).insert.delta).length()
         customEmbeds.push({ len, index })
       }
       index += Delta.Op.length(op)
@@ -399,11 +407,11 @@ const qChanges = [
       const insertPos = prng.int32(gen, 0, emb.len)
       const attrs = prng.oneOf(gen, marksChoices)
       const text = charCounter++ + prng.word(gen)
-      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { insert: text, attributes: attrs }] }])
+      p.editor.updateContents(new Delta().retain(emb.index).retain({ delta: new Delta().retain(insertPos).insert(text, attrs) }))
     } else { // option2: delete content
       const insertPos = prng.int32(gen, 0, emb.len)
       const overwrite = math.min(prng.int32(gen, 0, emb.len - insertPos), 2)
-      p.editor.updateContents([{ retain: emb.index }, { delta: [{ retain: insertPos }, { delete: overwrite }] }])
+      p.editor.updateContents(new Delta().retain(emb.index).retain({ delta: new Delta().retain(insertPos).delete(overwrite).ops }))
     }
   },
   /**
@@ -425,9 +433,9 @@ const qChanges = [
   (_y, gen, p) => { // format text
     const contentLen = p.editor.getText().length
     const insertPos = prng.int32(gen, 0, contentLen)
-    const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
+    const formatLen = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
     const format = prng.oneOf(gen, marksChoices)
-    p.editor.format(insertPos, overwrite, format)
+    p.editor.updateContents(new Delta().retain(insertPos).retain(formatLen, format))
   },
   /**
    * @param {Y.Doc} _y
@@ -441,8 +449,7 @@ const qChanges = [
     if (insertPos > 0) {
       ops.push({ retain: insertPos })
     }
-    ops.push({ insert: text }, { insert: '\n', format: { 'code-block': true } })
-    p.editor.updateContents(ops)
+    p.editor.updateContents(new Delta().retain(insertPos).insert(text).insert('\n', { 'code-block': true }))
   }
 ]
 
