@@ -34,11 +34,8 @@ export const testBasic = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -70,7 +67,6 @@ export const testComposeAddARow = () => {
     retain: { 'table-embed': { rows: [{ insert: { id: '55555555' } }] } }
   }])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -92,11 +88,8 @@ export const testComposeAddARow = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -135,7 +128,6 @@ export const testAddsTwoRows = () => {
     }
   }])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -158,11 +150,8 @@ export const testAddsTwoRows = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -201,7 +190,6 @@ export const testAddsARowAndChangesCellContent = () => {
     }
   }])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -225,10 +213,7 @@ export const testAddsARowAndChangesCellContent = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -264,7 +249,6 @@ export const testDeletesAColumn = () => {
     }
   }])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -278,10 +262,7 @@ export const testDeletesAColumn = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -317,7 +298,6 @@ export const testMoveColumn = () => {
     }
   }])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -339,10 +319,7 @@ export const testMoveColumn = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -373,7 +350,6 @@ export const testRemoveACellAttribute = () => {
     }
   ])
   const editorDelta = normQuillDelta(editor.getContents().ops)
-  console.log(editorDelta)
   t.compare(editorDelta, [{
     insert: {
       'table-embed': {
@@ -386,9 +362,6 @@ export const testRemoveACellAttribute = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }

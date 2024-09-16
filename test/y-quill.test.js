@@ -19,11 +19,8 @@ export const testCustomEmbedBasic = () => {
   const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
   editor.updateContents([{ insert: { delta: [{ insert: 'failed test' }] } }])
   editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
@@ -48,8 +45,6 @@ export const testConcurrentOverlappingFormatting = _tc => {
   // sync
   Y.applyUpdate(/** @type {Y.Doc} */ (type.doc), Y.encodeStateAsUpdate(/** @type {Y.Doc} */ (type2.doc)))
   Y.applyUpdate(/** @type {Y.Doc} */ (type2.doc), Y.encodeStateAsUpdate(/** @type {Y.Doc} */ (type.doc)))
-  console.log(editor.getContents().ops)
-  console.log(editor2.getContents().ops)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
 }
 

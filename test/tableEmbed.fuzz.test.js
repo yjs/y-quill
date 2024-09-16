@@ -222,11 +222,8 @@ export const testBasic = () => {
       }
     }
   }])
-  console.log('contents: ', editor.getContents().ops[0])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  console.log('editor.contents', editor.getContents().ops)
-  console.log('type.toJSON()', type.toDelta())
   t.compare(type.toDelta(), type2.toDelta())
 }
 
