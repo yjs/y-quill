@@ -21,7 +21,7 @@ export const testCustomEmbedBasic = () => {
   editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
   t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testBasicInsert = () => {
@@ -161,7 +161,7 @@ const qChanges = [
  */
 const checkResult = result => {
   // all "delta" custom embeds are transformed to Y.XmlElements
-  t.assert(result.testObjects[0].type.toDelta().every(/** @param {any} d */ d => {
+  t.assert(result.testObjects[0].type.getDelta().toJSON().every(/** @param {any} d */ d => {
     return d.insert == null || d.insert.delta == null
   }))
   for (let i = 1; i < result.testObjects.length; i++) {

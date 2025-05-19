@@ -179,8 +179,27 @@ export class QuillBinding {
         let delta = new Delta(embedEventOps)
 
         const event = (tr.changedParentTypes.get(/** @type {any} */ (type)) || []).find(event => event.target === type)
+        /**
+         * quill seems to favor having deletions at the beginning. This function moves deletes to
+         * the left if possible.
+         * @param {Delta} delta
+         */
+        const normalizeDelta = delta => {
+          // @todo this could be part of lib0/delta (automated when constructing a delta)
+          for (let i = 0; i < delta.ops.length; i++) {
+            const op = delta.ops[i]
+            if (op.delete != null) {
+              let j = i
+              // move deletion to the left
+              for (; j > 0 && delta.ops[j - 1].insert != null; j--) {
+                delta.ops[j] = delta.ops[j - 1]
+                delta.ops[j - 1] = op
+              }
+            }
+          }
+        }
         if (event != null) {
-          const eventDelta = event.delta
+          const eventDelta = event.delta.toJSON()
           // We always explicitly set attributes, otherwise concurrent edits may
           // result in quill assuming that a text insertion shall inherit existing
           // attributes.
@@ -208,10 +227,12 @@ export class QuillBinding {
             delta = new Delta(/** @type {any} */ (sanitizedDelta)).compose(delta)
           }
         }
+        normalizeDelta(delta)
         /**
          * @type {Delta}
          */
         const appliedDelta = quill.updateContents(delta, this)
+        normalizeDelta(appliedDelta)
         const equals = appliedDelta.ops.length === delta.ops.length && appliedDelta.ops.every((op, i) => {
           const otherOp = delta.ops[i]
           if (op.insert != null) return op.insert === otherOp.insert || (typeof op.insert === 'object' && typeof op.insert === typeof otherOp.insert)
@@ -220,8 +241,8 @@ export class QuillBinding {
         })
         if (!equals) {
           // diff the documents if we find implicit changes from quill
-          const { ops: implicitChanges } = new Delta(typeDeltaToQuillDelta(normQuillDelta(type.toDelta()), this)).diff(new Delta(normQuillDelta(quill.getContents().ops)))
-          if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n')) {
+          const { ops: implicitChanges } = new Delta(typeDeltaToQuillDelta(normQuillDelta(type.getDelta().toJSON()), this)).diff(new Delta(normQuillDelta(quill.getContents().ops)))
+          if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n' || implicitChanges[implicitChanges.length - 1].attributes != null)) {
             this.doc.transact(() => {
               // reuse the quillObserver which transforms custom embeds
               this._quillObserver(null, { ops: implicitChanges }, null, 'implicit')
@@ -343,7 +364,7 @@ export class QuillBinding {
     quill.on('editor-change', this._quillObserver)
     // This indirectly initializes _negatedUsedFormats.
     // Make sure that this call this after the _quillObserver is set.
-    quill.setContents(typeDeltaToQuillDelta(type.toDelta(), this), this)
+    quill.setContents(typeDeltaToQuillDelta(type.getDelta().toJSON(), this), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {

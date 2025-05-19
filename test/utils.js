@@ -251,12 +251,12 @@ const embeds = {
       const ytext = yxml.getAttribute('ytext')
       const ytextevent = events.find(event => event.target === ytext)
       if (ytextevent) {
-        return /** @type {any} */ (ytextevent.delta)
+        return /** @type {any} */ (ytextevent.delta.toJSON())
       }
       return []
     },
     typeToDelta: (yxml) => {
-      return yxml.getAttribute('ytext').toDelta()
+      return yxml.getAttribute('ytext').getDelta().toJSON()
     }
   }
 }

@@ -32,7 +32,7 @@ const ycellToDelta = (ycell) => {
    * @type {any}
    */
   const res = {
-    content: ycell.toDelta(),
+    content: ycell.getDelta().toJSON(),
     attributes
   }
   if (object.isEmpty(attributes)) {
@@ -83,7 +83,7 @@ export const tableEmbed = {
         return change
       })
       yline.applyDelta(changes)
-      yline.toDelta().forEach(/** @param {{ insert: { id: string }} }  d */ d => {
+      yline.getDelta().toJSON().forEach(/** @param {{ insert: { id: string }} }  d */ d => {
         if (d.insert == null || d.insert.id == null) error.unexpectedCase()
         mapping.push(d.insert.id)
       })
@@ -154,7 +154,7 @@ export const tableEmbed = {
     const createMapping = (yline) => {
       const mapping = new Map()
       let index = 0
-      yline.toDelta().forEach(/** @type {(d:any,index:number) => void} */ (d) => {
+      yline.getDelta().toJSON().forEach(/** @type {(d:any,index:number) => void} */ (d) => {
         const existingIndex = mapping.get(d.insert.id)
         if (existingIndex != null) {
           yline.delete(index, 1)
@@ -242,7 +242,7 @@ export const tableEmbed = {
      */
     const yToLine = (ylist, idMapping) => {
       let index = 0
-      return /** @type {DeltaOps} */ (ylist.toDelta()).map((rowOrColumn) => {
+      return /** @type {DeltaOps} */ (ylist.getDelta().toJSON()).map((rowOrColumn) => {
         if (typeof rowOrColumn.insert === 'string' || rowOrColumn.insert?.id == null) {
           return null
         }

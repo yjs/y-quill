@@ -162,7 +162,7 @@ const embeds = {
      * Y.Text.
      */
     typeToDelta: (yxml) => {
-      return yxml.getAttribute('ytext').toDelta()
+      return yxml.getAttribute('ytext').getDelta().toJSON()
     }
   }
 }

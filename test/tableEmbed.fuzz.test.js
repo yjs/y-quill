@@ -13,6 +13,7 @@ import Delta from 'quill-delta'
 // @ts-ignore
 import { init } from 'yjs/testHelper'
 import { normQuillDelta } from 'y-quill'
+import * as fun from 'lib0/function'
 
 /**
  * @typedef {Array<import('quill-delta').Op>} DeltaOps
@@ -224,7 +225,7 @@ export const testBasic = () => {
   }])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 /**
