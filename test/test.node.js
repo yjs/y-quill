@@ -15,7 +15,7 @@ global.innerHeight = 0
   'window',
   'document',
   'Node',
-  'navigator',
+  // 'navigator',
   'Text',
   'HTMLElement',
   'MutationObserver',
