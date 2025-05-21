@@ -81,6 +81,7 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
  * @template {Y.XmlElement} YType
  * @typedef {Object} QuillBindingOpts
  * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
+ * @property {Y.AbstractAttributionManager} [QuillBindingOpts.attributionManager]
  */
 
 /**
@@ -105,12 +106,13 @@ export class QuillBinding {
    * @param {Awareness} [awareness]
    * @param {QuillBindingOpts<any,any>} opts
    */
-  constructor (type, quill, awareness, { embeds = {} } = {}) {
+  constructor (type, quill, awareness, { embeds = {}, attributionManager = Y.noAttributionsManager } = {}) {
     const doc = /** @type {Y.Doc} */ (type.doc)
     this.type = type
     this.doc = doc
     this.quill = quill
     this.embeds = embeds
+    this.attributionManager = attributionManager
     const quillCursors = quill.getModule('cursors') || null
     this.quillCursors = quillCursors
     // This object contains all attributes used in the quill instance
@@ -178,7 +180,7 @@ export class QuillBinding {
 
         let delta = new Delta(embedEventOps)
 
-        const event = (tr.changedParentTypes.get(/** @type {any} */ (type)) || []).find(event => event.target === type)
+        const event = /** @type {Y.YTextEvent<any> | undefined} */ ((tr.changedParentTypes.get(/** @type {any} */ (type)) || []).find(event => event.target === type))
         /**
          * quill seems to favor having deletions at the beginning. This function moves deletes to
          * the left if possible.
@@ -199,7 +201,7 @@ export class QuillBinding {
           }
         }
         if (event != null) {
-          const eventDelta = event.delta.toJSON()
+          const eventDelta = /** @type {any} */ (event.getDelta(this.attributionManager).toJSON())
           // We always explicitly set attributes, otherwise concurrent edits may
           // result in quill assuming that a text insertion shall inherit existing
           // attributes.
@@ -294,7 +296,7 @@ export class QuillBinding {
         })
         if (origin !== this) {
           doc.transact(() => {
-            type.applyDelta(changes.ops)
+            type.applyDelta(changes.ops, this.attributionManager)
             let item = type._start
             /**
              * @param {number} n
@@ -364,7 +366,7 @@ export class QuillBinding {
     quill.on('editor-change', this._quillObserver)
     // This indirectly initializes _negatedUsedFormats.
     // Make sure that this call this after the _quillObserver is set.
-    quill.setContents(typeDeltaToQuillDelta(type.getDelta().toJSON(), this), this)
+    quill.setContents(typeDeltaToQuillDelta(type.getDelta(this.attributionManager).toJSON(), this), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
@@ -372,6 +374,21 @@ export class QuillBinding {
       })
       awareness.on('change', this._awarenessChange)
     }
+  }
+
+  /**
+   * @param {Y.AbstractAttributionManager} am
+   */
+  setAttributionManager (am) {
+    // unrender current attributions
+    const currentAttributions = /** @type {Array<any>} */ (this.type.getDelta(this.attributionManager, null, true).toJSON())
+    const unrenderDelta = currentAttributions.map(d => d.attribution != null ? { delete: typeof d.insert === 'string' ? d.insert.length : 1 } : d)
+    this.attributionManager = am
+    // render new attributions
+    const newAttributions = /** @type {any} */ (this.type.getDelta(am, null, true)).toJSON()
+    // compose changes and apply
+    const changes = new Delta(unrenderDelta).compose(new Delta(newAttributions))
+    this.quill.updateContents(changes, this)
   }
 
   destroy () {

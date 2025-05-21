@@ -74,7 +74,7 @@
     "standard": "^17.1.0",
     "typescript": "^5.4.5",
     "y-protocols": "^1.0.6",
-    "y-webrtc": "^10.3.0",
+    "y-websocket": "^3.0.0",
     "yjs": "^13.6.19"
   }
 }
