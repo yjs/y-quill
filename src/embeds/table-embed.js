@@ -83,7 +83,7 @@ export const tableEmbed = {
         return change
       })
       yline.applyDelta(changes)
-      yline.getDelta().toJSON().forEach(/** @param {{ insert: { id: string }} }  d */ d => {
+      yline.getDelta().toJSON().forEach(/** @param {any} d */ d => {
         if (d.insert == null || d.insert.id == null) error.unexpectedCase()
         mapping.push(d.insert.id)
       })

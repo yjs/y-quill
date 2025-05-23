@@ -17,7 +17,7 @@ import Delta from 'quill-delta'
 /**
  * Removes the pending '\n's if it has no attributes.
  *
- * @param {any} delta
+ * @param {Array<any>} delta
  */
 export const normQuillDelta = delta => {
   if (delta.length > 0) {
@@ -82,21 +82,17 @@ const updateCursor = (quillCursors, aw, clientId, doc, type) => {
  * @typedef {Object} QuillBindingOpts
  * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
  * @property {Y.AbstractAttributionManager} [QuillBindingOpts.attributionManager]
+ * @property {(attributions:any)=>Object<string,any>} [QuillBindingOpts.attributionToAttributes]
  */
 
 /**
- * @param {Array<any>} delta
- * @param {QuillBinding} binding
+ * @param {any} attribution
  */
-const typeDeltaToQuillDelta = (delta, binding) => delta.map(op => {
-  if (op.insert != null && op.insert instanceof Y.XmlElement) {
-    const embedName = op.insert.nodeName
-    const embedDef = binding.embeds[embedName]
-    if (embedDef != null) {
-      return { insert: { [embedName]: embedDef.typeToDelta(op.insert) } }
-    }
-  }
-  return op
+const defaultAttributionToAttributes = (attribution) => ({
+  // set this by default so that these props are not inherited
+  attributionInsert: attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null,
+  attributionDelete: attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null,
+  attributionFormat: attribution?.attributes ? (Object.values(attribution.attributes).map(users => users.join(',')).join(',') || 'unknown') : null
 })
 
 export class QuillBinding {
@@ -106,7 +102,7 @@ export class QuillBinding {
    * @param {Awareness} [awareness]
    * @param {QuillBindingOpts<any,any>} opts
    */
-  constructor (type, quill, awareness, { embeds = {}, attributionManager = Y.noAttributionsManager } = {}) {
+  constructor (type, quill, awareness, { embeds = {}, attributionManager = Y.noAttributionsManager, attributionToAttributes = defaultAttributionToAttributes } = {}) {
     const doc = /** @type {Y.Doc} */ (type.doc)
     this.type = type
     this.doc = doc
@@ -115,6 +111,30 @@ export class QuillBinding {
     this.attributionManager = attributionManager
     const quillCursors = quill.getModule('cursors') || null
     this.quillCursors = quillCursors
+    this._attributionToAttributes = attributionToAttributes
+    this._attributionAttributeNames = Object.keys(attributionToAttributes({ insert: [], delete: [], attributes: { bold: [] } }))
+    /**
+     * @param {any} d
+     * @return {Array<any>}
+     */
+    this._deltaToQuillDelta = (d) => {
+      const res = d.toJSON().map(/** @param {any} op */ op => {
+        if (op.insert != null && op.insert instanceof Y.XmlElement) {
+          const embedName = op.insert.nodeName
+          const embedDef = this.embeds[embedName]
+          if (embedDef != null) {
+            op.insert = { [embedName]: embedDef.typeToDelta(op.insert) }
+          }
+        }
+        if (op.insert != null || op.attribution != null) {
+          op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
+          delete op.attribution
+        }
+        return op
+      })
+      console.log('generated delta', res)
+      return res
+    }
     // This object contains all attributes used in the quill instance
     /**
      * @type {Record<string,any>}
@@ -141,6 +161,11 @@ export class QuillBinding {
      * @param {Y.Transaction} tr
      */
     this._typeObserver = (_events, tr) => {
+      if (tr.origin === this && this.attributionManager !== Y.noAttributionsManager) {
+        const changes = Y.mergeIdSets([tr.insertSet, tr.deleteSet])
+        const delta = type.getDelta(this.attributionManager, { itemsToRender: changes, retainInserts: true })
+        quill.updateContents(this._deltaToQuillDelta(delta).filter(d => d.delete == null), this)
+      }
       if (tr.origin !== this) {
         /**
          * @type {Map<Y.XmlElement, any>}
@@ -201,7 +226,8 @@ export class QuillBinding {
           }
         }
         if (event != null) {
-          const eventDelta = /** @type {any} */ (event.getDelta(this.attributionManager).toJSON())
+          const eventDelta = /** @type {any} */ (this._deltaToQuillDelta(event.getDelta(this.attributionManager)))
+          console.log('ytext observer called ', { delta: eventDelta })
           // We always explicitly set attributes, otherwise concurrent edits may
           // result in quill assuming that a text insertion shall inherit existing
           // attributes.
@@ -243,7 +269,7 @@ export class QuillBinding {
         })
         if (!equals) {
           // diff the documents if we find implicit changes from quill
-          const { ops: implicitChanges } = new Delta(typeDeltaToQuillDelta(normQuillDelta(type.getDelta().toJSON()), this)).diff(new Delta(normQuillDelta(quill.getContents().ops)))
+          const { ops: implicitChanges } = new Delta(normQuillDelta(this._deltaToQuillDelta(type.getDelta()))).diff(new Delta(normQuillDelta(quill.getContents().ops)))
           if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n' || implicitChanges[implicitChanges.length - 1].attributes != null)) {
             this.doc.transact(() => {
               // reuse the quillObserver which transforms custom embeds
@@ -261,6 +287,7 @@ export class QuillBinding {
      * @param {any} origin
      */
     this._quillObserver = (_eventType, delta, _state, origin) => {
+      console.log('quill observer called ', { delta })
       if (delta && delta.ops) {
         const ops = delta.ops
         // Split ops into two sets: changes related to custom embeds and all other changes. The
@@ -270,6 +297,9 @@ export class QuillBinding {
         const changes = new Delta()
         ops.forEach(op => {
           if (op.attributes !== undefined) {
+            for (let name of this._attributionAttributeNames) {
+              delete op.attributes[name]
+            }
             for (const key in op.attributes) {
               if (this._negatedUsedFormats[key] === undefined) {
                 this._negatedUsedFormats[key] = false
@@ -366,7 +396,7 @@ export class QuillBinding {
     quill.on('editor-change', this._quillObserver)
     // This indirectly initializes _negatedUsedFormats.
     // Make sure that this call this after the _quillObserver is set.
-    quill.setContents(typeDeltaToQuillDelta(type.getDelta(this.attributionManager).toJSON(), this), this)
+    quill.setContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager)), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
@@ -374,18 +404,23 @@ export class QuillBinding {
       })
       awareness.on('change', this._awarenessChange)
     }
+    this._onAttrChange = this.attributionManager.on('change', (changes) => {
+      quill.updateContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager, { itemsToRender: changes, retainInserts: true, retainDeletes: true })), this)
+    })
   }
 
   /**
    * @param {Y.AbstractAttributionManager} am
    */
   setAttributionManager (am) {
+    this.attributionManager.off('change', this._onAttrChange)
     // unrender current attributions
-    const currentAttributions = /** @type {Array<any>} */ (this.type.getDelta(this.attributionManager, null, true).toJSON())
+    const currentAttributions = this._deltaToQuillDelta(this.type.getDelta(this.attributionManager, { retainInserts: true, retainDeletes: true }))
     const unrenderDelta = currentAttributions.map(d => d.attribution != null ? { delete: typeof d.insert === 'string' ? d.insert.length : 1 } : d)
     this.attributionManager = am
+    this.attributionManager.on('change', this._onAttrChange)
     // render new attributions
-    const newAttributions = /** @type {any} */ (this.type.getDelta(am, null, true)).toJSON()
+    const newAttributions = this._deltaToQuillDelta(this.type.getDelta(am, { retainInserts: true, retainDeletes: true }))
     // compose changes and apply
     const changes = new Delta(unrenderDelta).compose(new Delta(newAttributions))
     this.quill.updateContents(changes, this)
@@ -394,6 +429,7 @@ export class QuillBinding {
   destroy () {
     this.type.unobserveDeep(this._typeObserver)
     this.quill.off('editor-change', this._quillObserver)
+    this.attributionManager.off('change', this._onAttrChange)
     if (this.awareness) {
       this.awareness.off('change', this._awarenessChange)
     }

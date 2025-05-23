@@ -63,14 +63,14 @@
     "yjs": "^13.6.14"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^4.41.0",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.5.5",
     "concurrently": "^8.2.2",
     "jsdom": "^24.0.0",
     "quill": "^2.0.2",
-    "rollup": "^4.16.2",
     "standard": "^17.1.0",
     "typescript": "^5.4.5",
     "y-protocols": "^1.0.6",

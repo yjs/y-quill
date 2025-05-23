@@ -1,3 +1,17 @@
 #editor {
   min-height: 500px;
 }
+
+#editor {
+  [data-attribution-insert] {
+    background-color: #7ce24d;
+  }
+  [data-attribution-delete] {
+    color: grey;
+    text-decoration: line-through;
+  }
+  [data-attribution-format] {
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+}

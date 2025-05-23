@@ -3,7 +3,7 @@ import Delta from 'quill-delta'
 import { QuillBinding } from 'y-quill'
 import * as Y from 'yjs'
 
-import { tableEmbed } from '../embeds/table-embed.js'
+import { tableEmbed } from '../src/embeds/table-embed.js'
 import TableEmbed from 'quill/modules/tableEmbed.js'
 
 const Parchment = Quill.import('parchment')
@@ -196,7 +196,7 @@ const Text = Quill.import('blots/text')
  */
 const Image = Quill.import('formats/image')
 
-const registry = new Parchment.Registry()
+export const registry = new Parchment.Registry()
 registry.register(
   Scroll,
   Block,
@@ -227,7 +227,7 @@ Delta.registerEmbed('delta', {
 /**
  * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef<any,any> }}
  */
-const embeds = {
+export const embeds = {
   'table-embed': tableEmbed,
   delta: {
     /**

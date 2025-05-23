@@ -3,14 +3,22 @@
 <head>
     <meta charset="utf-8"/>
     <title>Yjs Quill Example</title>
-    <script type="text/javascript" src="../dist/quill-demo.js" async></script>
     <link rel=stylesheet href="./quill.css" async defer>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet" />
 </head>
 <body>
   <button type="button" id="y-connect-btn">Disconnect</button>
+  <label>
+    <input id='toggle-show-suggestions' type="checkbox">
+    show suggestions
+  </label>
+  <label>
+    <input id='toggle-suggest-mode' type="checkbox">
+    suggest-mode
+  </label>
   <p></p>
   <p>This is a demo of the <a href="https://github.com/yjs/yjs">Yjs</a> ⇔ <a href="https://quilljs.com/">Quill</a> binding: <a href="https://github.com/yjs/y-quill">y-quill</a>.</p>
   <p>The content of this editor is shared with every client that visits this domain.</p>
+  <script type="text/javascript" src="../dist/quill-demo.js" async></script>
 </body>
 </html>

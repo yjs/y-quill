@@ -11,7 +11,7 @@ export default [{
   }],
   external: id => /^lib0\//.test(id)
 }, {
-  input: './embeds/table-embed.js',
+  input: './src/embeds/table-embed.js',
   output: [{
     name: 'tableEmbed',
     file: 'dist/embeds/table-embed.cjs',

@@ -13,7 +13,6 @@ import Delta from 'quill-delta'
 // @ts-ignore
 import { init } from 'yjs/testHelper'
 import { normQuillDelta } from 'y-quill'
-import * as fun from 'lib0/function'
 
 /**
  * @typedef {Array<import('quill-delta').Op>} DeltaOps
