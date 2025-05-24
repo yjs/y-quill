@@ -13,6 +13,17 @@ import { createQuillEditor } from './utils.js'
  * @typedef {import('./utils.js').TestData} TestData
  */
 
+export const testNewline = () => {
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{ insert: '\n' }])
+  t.compare(editor.getContents().ops, [{ insert: '\n\n' }])
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  t.compare(type.toString(), '\n')
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
+}
+
 export const testCustomEmbedBasic = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)

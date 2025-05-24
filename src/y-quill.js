@@ -45,10 +45,11 @@ export const normQuillDelta = delta => {
  * @param {number} clientId
  * @param {Y.Doc} doc
  * @param {Y.Text} type
+ * @param {Awareness} awareness
  */
-const updateCursor = (quillCursors, aw, clientId, doc, type) => {
+const updateCursor = (quillCursors, aw, clientId, doc, type, awareness) => {
   try {
-    if (aw && aw.cursor && clientId !== doc.clientID) {
+    if (aw && aw.cursor && clientId !== awareness.clientID) {
       const user = aw.user || {}
       const color = user.color || '#ffa500'
       const name = user.name || `User: ${clientId}`
@@ -115,9 +116,10 @@ export class QuillBinding {
     this._attributionAttributeNames = Object.keys(attributionToAttributes({ insert: [], delete: [], attributes: { bold: [] } }))
     /**
      * @param {any} d
+     * @param {boolean} explicitAttributions
      * @return {Array<any>}
      */
-    this._deltaToQuillDelta = (d) => {
+    this._deltaToQuillDelta = (d, explicitAttributions = true) => {
       const res = d.toJSON().map(/** @param {any} op */ op => {
         if (op.insert != null && op.insert instanceof Y.XmlElement) {
           const embedName = op.insert.nodeName
@@ -126,7 +128,7 @@ export class QuillBinding {
             op.insert = { [embedName]: embedDef.typeToDelta(op.insert) }
           }
         }
-        if (op.insert != null || op.attribution != null) {
+        if ((op.insert != null && explicitAttributions) || op.attribution != null) {
           op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
           delete op.attribution
         }
@@ -145,12 +147,13 @@ export class QuillBinding {
      * @param {{ added: Array<number>, removed: Array<number>, updated: Array<number> }} change
      */
     this._awarenessChange = ({ added, removed, updated }) => {
+      console.log('received awareness change')
       const states = /** @type {Awareness} */ (awareness).getStates()
       added.forEach(id => {
-        updateCursor(quillCursors, states.get(id), id, doc, type)
+        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness))
       })
       updated.forEach(id => {
-        updateCursor(quillCursors, states.get(id), id, doc, type)
+        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness))
       })
       removed.forEach(id => {
         quillCursors.removeCursor(id.toString())
@@ -269,7 +272,7 @@ export class QuillBinding {
         })
         if (!equals) {
           // diff the documents if we find implicit changes from quill
-          const { ops: implicitChanges } = new Delta(normQuillDelta(this._deltaToQuillDelta(type.getDelta()))).diff(new Delta(normQuillDelta(quill.getContents().ops)))
+          const { ops: implicitChanges } = new Delta(normQuillDelta(this._deltaToQuillDelta(type.getDelta(), false))).diff(new Delta(normQuillDelta(quill.getContents().ops)))
           if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n' || implicitChanges[implicitChanges.length - 1].attributes != null)) {
             this.doc.transact(() => {
               // reuse the quillObserver which transforms custom embeds
@@ -389,7 +392,7 @@ export class QuillBinding {
         }
         // update all remote cursor locations
         awareness.getStates().forEach((aw, clientId) => {
-          updateCursor(quillCursors, aw, clientId, doc, type)
+          updateCursor(quillCursors, aw, clientId, doc, type, awareness)
         })
       }
     }
@@ -400,7 +403,7 @@ export class QuillBinding {
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
-        updateCursor(quillCursors, aw, clientId, doc, type)
+        updateCursor(quillCursors, aw, clientId, doc, type, awareness)
       })
       awareness.on('change', this._awarenessChange)
     }

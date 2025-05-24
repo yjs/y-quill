@@ -126,12 +126,21 @@ export const testQuillDeleteSuggestedContentAfterSuggestion = () => {
   t.compare(editorContent2, [{ insert: 'hello', attributes: { attributionInsert: 'unknown' } }, { insert: ' \n' }])
 }
 
-export const testAcceptSuggestions = () => {
+export const testAcceptInsertSuggestions = () => {
   const { editor, ytext, suggestionYText, ydoc, suggestionDoc } = createQuillEditor()
   suggestionDoc.on('update', update => { Y.applyUpdate(ydoc, update) })
   editor.insertText(0, 'hi ')
   editor.insertText(3, 'there')
   const editorContent = editor.getContents().ops
   t.compare(editorContent, [{ insert: 'hi there\n' }])
+}
+
+export const testAcceptDeleteSuggestions = () => {
+  const { editor, ytext, suggestionYText, ydoc, suggestionDoc } = createQuillEditor()
+  ytext.insert(0, 'hello world')
+  suggestionDoc.on('update', update => { Y.applyUpdate(ydoc, update) })
+  editor.deleteText(0, 6)
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: 'world\n' }])
 }
 

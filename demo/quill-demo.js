@@ -9,15 +9,23 @@ import Quill from 'quill'
 import QuillCursors from 'quill-cursors'
 import QuillTableEmbed, { tableHandler } from 'quill/modules/tableEmbed'
 import { register as registerSuggestionBlots } from '../src/blots/suggestion.js'
+import * as random from 'lib0/random'
 
 registerSuggestionBlots()
 Quill.register('modules/cursors', QuillCursors)
 QuillTableEmbed.register()
 Delta.registerEmbed('table-embed', tableHandler)
 
+const roomName = 'quill-suggestion-demo-1'
+
 /*
- * # Logic for toggling suggestion mode
+ * # Logic for toggling connection & suggestion mode
  */
+
+/**
+ * @type {HTMLInputElement?}
+ */
+const elemToggleConnect = document.querySelector('#toggle-connect')
 
 /**
  * @type {HTMLInputElement?}
@@ -27,10 +35,13 @@ const elemToggleShowSuggestions = document.querySelector('#toggle-show-suggestio
  * @type {HTMLInputElement?}
  */
 const elemToggleSuggestMode = document.querySelector('#toggle-suggest-mode')
-if (elemToggleShowSuggestions == null || elemToggleSuggestMode == null) error.unexpectedCase()
+if (elemToggleShowSuggestions == null || elemToggleSuggestMode == null || elemToggleConnect == null) error.unexpectedCase()
 
 elemToggleShowSuggestions.addEventListener('change', () => initEditorBinding())
 
+// when in suggestion-mode, we should use a different clientId to reduce some overhead. This is not
+// strictly necessary.
+let otherClientID = random.uint53() 
 elemToggleSuggestMode.addEventListener('change', () => {
   const enabled = elemToggleSuggestMode.checked
   if (enabled) {
@@ -39,7 +50,20 @@ elemToggleSuggestMode.addEventListener('change', () => {
   } else {
     elemToggleShowSuggestions.disabled = false
   }
+  let nextClientId = otherClientID
+  otherClientID = suggestionDoc.clientID
+  suggestionDoc.clientID = nextClientId
   initEditorBinding()
+})
+
+elemToggleConnect.addEventListener('change', () => {
+  if (elemToggleConnect.checked) {
+    providerYdoc.connect()
+    providerYdocSuggestions.connect()
+  } else {
+    providerYdoc.disconnect()
+    providerYdocSuggestions.disconnect()
+  }
 })
 
 /*
@@ -72,9 +96,9 @@ const editor = new Quill(editorContainer, {
  */
 
 const ydoc = new Y.Doc()
-const providerYdoc = new WebsocketProvider('wss://demos.yjs.dev/ws', 'quill-demo-1', ydoc, { connect: false })
+const providerYdoc = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, ydoc, { connect: elemToggleConnect.checked })
 const suggestionDoc = new Y.Doc()
-const providerYdocSuggestions = new WebsocketProvider('wss://demos.yjs.dev/ws', 'quill-demo-suggestions-1', suggestionDoc, { connect: false })
+const providerYdocSuggestions = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName + '--suggestions', suggestionDoc, { connect: elemToggleConnect.checked})
 const am = Y.createAttributionManagerFromDiff(ydoc, suggestionDoc)
 
 // Define user name and user name
