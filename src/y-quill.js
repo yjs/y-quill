@@ -20,10 +20,10 @@ import Delta from 'quill-delta'
  * @param {Array<any>} delta
  */
 export const normQuillDelta = delta => {
-  if (delta.length > 0) {
+  while (delta.length > 0) {
     const d = delta[delta.length - 1]
     const insert = d.insert
-    if (d.attributes === undefined && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
+    if ((d.attributes == null || object.isEmpty(d.attributes)) && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
       delta = delta.slice()
       let ins = insert.slice(0, -1)
       while (ins.slice(-1) === '\n') {
@@ -32,9 +32,10 @@ export const normQuillDelta = delta => {
       delta[delta.length - 1] = { insert: ins }
       if (ins.length === 0) {
         delta.pop()
+        continue
       }
-      return delta
     }
+    break
   }
   return delta
 }
@@ -46,16 +47,17 @@ export const normQuillDelta = delta => {
  * @param {Y.Doc} doc
  * @param {Y.Text} type
  * @param {Awareness} awareness
+ * @param {Y.AbstractAttributionManager} attributionManager
  */
-const updateCursor = (quillCursors, aw, clientId, doc, type, awareness) => {
+const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attributionManager) => {
   try {
     if (aw && aw.cursor && clientId !== awareness.clientID) {
       const user = aw.user || {}
       const color = user.color || '#ffa500'
       const name = user.name || `User: ${clientId}`
       quillCursors.createCursor(clientId.toString(), name, color)
-      const anchor = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.anchor), doc)
-      const head = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.head), doc)
+      const anchor = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.anchor), doc, true, attributionManager)
+      const head = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(aw.cursor.head), doc, true, attributionManager)
       if (anchor && head && anchor.type === type) {
         quillCursors.moveCursor(clientId.toString(), { index: anchor.index, length: head.index - anchor.index })
       }
@@ -150,10 +152,10 @@ export class QuillBinding {
       console.log('received awareness change')
       const states = /** @type {Awareness} */ (awareness).getStates()
       added.forEach(id => {
-        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness))
+        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness), this.attributionManager)
       })
       updated.forEach(id => {
-        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness))
+        updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness), this.attributionManager)
       })
       removed.forEach(id => {
         quillCursors.removeCursor(id.toString())
@@ -270,10 +272,27 @@ export class QuillBinding {
           if (op.retain != null) return op.retain === otherOp.retain || (typeof op.retain === 'object' && typeof op.retain === typeof otherOp.retain)
           return op.delete === otherOp.delete
         })
-        if (!equals) {
+        if (!equals && origin !== 'implicit') {
+          /**
+           * @todo outsource this
+           * @todo idea: if there are implicit changes with attributions, rerender the editor
+           *
+           * @param {Array<any>} ops
+           */
+          const removeAttributions = (ops) => { 
+            ops.forEach(op => {
+              if (op.attributes != null) {
+                for (let name of this._attributionAttributeNames) {
+                  delete op.attributes[name]
+                }
+              }
+            })
+            return ops
+          }
           // diff the documents if we find implicit changes from quill
-          const { ops: implicitChanges } = new Delta(normQuillDelta(this._deltaToQuillDelta(type.getDelta(), false))).diff(new Delta(normQuillDelta(quill.getContents().ops)))
+          const { ops: implicitChanges } = new Delta(normQuillDelta(removeAttributions(this._deltaToQuillDelta(type.getDelta(this.attributionManager), false)))).diff(new Delta(normQuillDelta(removeAttributions(quill.getContents().ops))))
           if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n' || implicitChanges[implicitChanges.length - 1].attributes != null)) {
+            console.warn('try to apply implicit changes', implicitChanges)
             this.doc.transact(() => {
               // reuse the quillObserver which transforms custom embeds
               this._quillObserver(null, { ops: implicitChanges }, null, 'implicit')
@@ -328,8 +347,12 @@ export class QuillBinding {
           changes.push(op)
         })
         if (origin !== this) {
-          doc.transact(() => {
+          doc.transact(tr => {
             type.applyDelta(changes.ops, this.attributionManager)
+            const attributedDeletes = tr.meta.get('attributedDeletes')
+            if (attributedDeletes) {
+              quill.updateContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager, { itemsToRender: attributedDeletes, retainInserts: true, retainDeletes: false})), this)
+            }
             let item = type._start
             /**
              * @param {number} n
@@ -381,8 +404,8 @@ export class QuillBinding {
             awareness.setLocalStateField('cursor', /** @type {any} */ (null))
           }
         } else {
-          const anchor = Y.createRelativePositionFromTypeIndex(type, sel.index)
-          const head = Y.createRelativePositionFromTypeIndex(type, sel.index + sel.length)
+          const anchor = Y.createRelativePositionFromTypeIndex(type, sel.index, 0, this.attributionManager)
+          const head = Y.createRelativePositionFromTypeIndex(type, sel.index + sel.length, 0, this.attributionManager)
           if (!aw || !aw.cursor || !Y.compareRelativePositions(anchor, aw.cursor.anchor) || !Y.compareRelativePositions(head, aw.cursor.head)) {
             awareness.setLocalStateField('cursor', {
               anchor,
@@ -392,7 +415,7 @@ export class QuillBinding {
         }
         // update all remote cursor locations
         awareness.getStates().forEach((aw, clientId) => {
-          updateCursor(quillCursors, aw, clientId, doc, type, awareness)
+          updateCursor(quillCursors, aw, clientId, doc, type, awareness, attributionManager)
         })
       }
     }
@@ -403,7 +426,7 @@ export class QuillBinding {
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {
-        updateCursor(quillCursors, aw, clientId, doc, type, awareness)
+        updateCursor(quillCursors, aw, clientId, doc, type, awareness, attributionManager)
       })
       awareness.on('change', this._awarenessChange)
     }

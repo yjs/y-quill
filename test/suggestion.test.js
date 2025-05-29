@@ -20,12 +20,13 @@ const simpleSync = (ydoc1, ydoc2) => {
  * @param {Y.Doc} [ydoc]
  */
 const createQuillEditor = (ydoc = new Y.Doc()) => {
+  ydoc.guid = 'ydoc'
   const suggestionDoc = Y.cloneDoc(ydoc)
+  suggestionDoc.guid = 'suggestionDoc'
   const remoteYdoc = Y.cloneDoc(ydoc)
+  remoteYdoc.guid = 'remoteDoc'
   const remoteSuggestionDoc = Y.cloneDoc(ydoc)
-  ydoc.on('update', update => {
-    Y.applyUpdate(suggestionDoc, update)
-  })
+  remoteSuggestionDoc.guid = 'remoteSuggestionDoc'
   simpleSync(ydoc, remoteYdoc)
   simpleSync(remoteSuggestionDoc, suggestionDoc)
   const attributionManager = Y.createAttributionManagerFromDiff(ydoc, suggestionDoc)
@@ -38,6 +39,14 @@ const createQuillEditor = (ydoc = new Y.Doc()) => {
   const remoteEditor = new Quill(document.createElement('div'), { registry })
   const remoteBinding = new QuillBinding(remoteSuggestionYText, remoteEditor, undefined, { embeds, attributionManager: remoteAttributionManager })
   const validate = () => {
+    console.log({ 
+      localtextcontent: suggestionYText.getDelta(attributionManager).toJSON(),
+      remoteytextcontent: remoteSuggestionYText.getDelta(remoteAttributionManager).toJSON(),
+      localNoS: ytext.getDelta(attributionManager).toJSON(),
+      remoteNoS: remoteYdoc.getText('text').getDelta(remoteAttributionManager).toJSON(),
+      localEditor: editor.getContents().ops,
+      remoteEditor: remoteEditor.getContents().ops
+    })
     t.compare(editor.getContents().ops, remoteEditor.getContents().ops)
   }
   return {
@@ -90,6 +99,21 @@ export const testDeleteSuggestedContent2 = () => {
   t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'orld', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
   validate()
 }
+
+export const testDeleteSuggestedDelete = () => {
+  const { editor, ytext, suggestionYText, validate } = createQuillEditor()
+  ytext.insert(0, 'hello world')
+  t.assert(suggestionYText.toString() === ytext.toString())
+  suggestionYText.delete(6, 5)
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown' } }, { insert: '\n' }])
+  // nothing should change
+  editor.deleteText(7, 1)
+  const editorContent2 = editor.getContents().ops
+  t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown' } }, { insert: '\n' }])
+  validate()
+}
+
 export const testQuillInsert = () => {
   const { editor, ytext, suggestionYText, validate } = createQuillEditor()
   ytext.insert(0, 'hello ')
@@ -157,19 +181,20 @@ export const testQuillDeleteSuggestedContentAfterSuggestion = () => {
 }
 
 export const testAcceptInsertSuggestions = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, validate } = createQuillEditor()
-  suggestionDoc.on('update', update => { Y.applyUpdate(ydoc, update) })
+  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
+  am.suggestionMode = false
   editor.insertText(0, 'hi ')
   editor.insertText(3, 'there')
   const editorContent = editor.getContents().ops
+  console.log({ ytext, suggestionYText, c: suggestionYText.getDelta(am) })
   t.compare(editorContent, [{ insert: 'hi there\n' }])
   validate()
 }
 
 export const testAcceptDeleteSuggestions = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, validate } = createQuillEditor()
+  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, 'hello world')
-  suggestionDoc.on('update', update => { Y.applyUpdate(ydoc, update) })
+  am.suggestionMode = false
   editor.deleteText(0, 6)
   const editorContent = editor.getContents().ops
   t.compare(editorContent, [{ insert: 'world\n' }])
@@ -178,9 +203,9 @@ export const testAcceptDeleteSuggestions = () => {
 }
 
 export const testAcceptDeleteSuggestions2 = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, validate } = createQuillEditor()
+  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, 'hello world')
-  suggestionDoc.on('update', update => { Y.applyUpdate(ydoc, update) })
+  am.suggestionMode = false
   suggestionYText.delete(0, 6)
   const editorContent = editor.getContents().ops
   t.compare(editorContent, [{ insert: 'world\n' }])
@@ -188,3 +213,38 @@ export const testAcceptDeleteSuggestions2 = () => {
   validate()
 }
 
+export const testQuillInsertNewlineAtEnd = () => {
+  const { editor, ytext, suggestionYText, validate } = createQuillEditor()
+  ytext.insert(0, 'hello')
+  editor.insertText(5, '\n')
+  suggestionYText.insert(7, '\n')
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: 'hello\n\n\n' }])
+  validate()
+}
+
+export const testQuillSuggestedFormatting = () => {
+  const { editor, ytext, suggestionYText, validate } = createQuillEditor()
+  ytext.insert(0, 'hello world!')
+  editor.updateContents([{ retain: 6 }, { retain: 5, attributes: { bold: true } }])
+  suggestionYText.format(0, 3, { italic: true })
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
+  editor.updateContents([{ retain: 0 }, { insert: 'XXX', attributes: { bold: true } }])
+  const editorContent2 = editor.getContents().ops
+  t.compare(editorContent2, [{ insert: 'XXX', attributes: { bold: true, attributionInsert: 'unknown', attributionFormat: 'unknown' } }, { insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
+  validate()
+}
+
+export const testPuzzle1 = () => {
+  const { editor, ytext, suggestionYText, attributionManager: am, validate } = createQuillEditor()
+  ytext.insert(0, '12345')
+  editor.updateContents([{ retain: 2 }, { insert: 'X' }, { delete: 2 }])
+  am.suggestionMode = false
+  editor.updateContents([{ retain: 3 }, { delete: 1 }])
+  editor.updateContents([{ retain: 2 }, { delete: 1 }])
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: '12' }, { insert: '4', attributes: { attributionDelete: 'unknown' } }, { insert: '5\n' }])
+  t.compare(suggestionYText.getDelta(am).toJSON(), [{ insert: '12' }, { insert: '4', attribution: { delete: [] } }, { insert: '5' }] )
+  validate()
+}

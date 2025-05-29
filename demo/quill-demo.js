@@ -16,7 +16,7 @@ Quill.register('modules/cursors', QuillCursors)
 QuillTableEmbed.register()
 Delta.registerEmbed('table-embed', tableHandler)
 
-const roomName = 'quill-suggestion-demo-1'
+const roomName = 'quill-suggestion-demo-3'
 
 /*
  * # Logic for toggling connection & suggestion mode
@@ -37,6 +37,10 @@ const elemToggleShowSuggestions = document.querySelector('#toggle-show-suggestio
 const elemToggleSuggestMode = document.querySelector('#toggle-suggest-mode')
 if (elemToggleShowSuggestions == null || elemToggleSuggestMode == null || elemToggleConnect == null) error.unexpectedCase()
 
+if (localStorage.getItem('should-connect') != null) {
+  elemToggleConnect.checked = localStorage.getItem('should-connect') === 'true'
+}
+
 elemToggleShowSuggestions.addEventListener('change', () => initEditorBinding())
 
 // when in suggestion-mode, we should use a different clientId to reduce some overhead. This is not
@@ -44,6 +48,7 @@ elemToggleShowSuggestions.addEventListener('change', () => initEditorBinding())
 let otherClientID = random.uint53() 
 elemToggleSuggestMode.addEventListener('change', () => {
   const enabled = elemToggleSuggestMode.checked
+  am.suggestionMode = enabled
   if (enabled) {
     elemToggleShowSuggestions.checked = true
     elemToggleShowSuggestions.disabled = true
@@ -58,12 +63,13 @@ elemToggleSuggestMode.addEventListener('change', () => {
 
 elemToggleConnect.addEventListener('change', () => {
   if (elemToggleConnect.checked) {
-    providerYdoc.connect()
-    providerYdocSuggestions.connect()
+    providerYdoc.connectBc()
+    providerYdocSuggestions.connectBc()
   } else {
-    providerYdoc.disconnect()
-    providerYdocSuggestions.disconnect()
+    providerYdoc.disconnectBc()
+    providerYdocSuggestions.disconnectBc()
   }
+  localStorage.setItem('should-connect', elemToggleConnect.checked ? 'true' : 'false')
 })
 
 /*
@@ -71,6 +77,7 @@ elemToggleConnect.addEventListener('change', () => {
  */
 const editorContainer = document.createElement('div')
 editorContainer.setAttribute('id', 'editor')
+editorContainer.setAttribute('spellcheck', 'false')
 document.body.insertBefore(editorContainer, null)
 const editor = new Quill(editorContainer, {
   modules: {
@@ -106,18 +113,6 @@ const am = Y.createAttributionManagerFromDiff(ydoc, suggestionDoc)
 providerYdoc.awareness.setLocalStateField('user', {
   name: 'Typing Jimmy',
   color: 'blue'
-})
-
-// changes from ydoc should always flow into suggestionDoc
-// changes from suggestionDoc only flow into ydoc if suggestion-mode is disabled
-ydoc.on('update', update => {
-  Y.applyUpdate(suggestionDoc, update)
-})
-suggestionDoc.on('update', (update, origin, _doc, tr) => {
-  // only if event is local and suggestion mode is enabled
-  if (!elemToggleSuggestMode.checked && tr.local && [currentBinding, null].some(o => o === origin)) {
-    Y.applyUpdate(ydoc, update)
-  }
 })
 
 /*

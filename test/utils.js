@@ -195,9 +195,19 @@ const Text = Quill.import('blots/text')
  * @type {any}
  */
 const Image = Quill.import('formats/image')
+/**
+ * @type {any}
+ */
+const Bold = Quill.import('formats/bold')
+/**
+ * @type {any}
+ */
+const Italic = Quill.import('formats/italic')
 
 export const registry = new Parchment.Registry()
 registry.register(
+  Bold,
+  Italic,
   Scroll,
   Block,
   Break,
