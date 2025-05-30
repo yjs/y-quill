@@ -272,7 +272,7 @@ export class QuillBinding {
           if (op.retain != null) return op.retain === otherOp.retain || (typeof op.retain === 'object' && typeof op.retain === typeof otherOp.retain)
           return op.delete === otherOp.delete
         })
-        if (!equals && origin !== 'implicit') {
+        if (!equals && tr.origin !== 'implicit') {
           /**
            * @todo outsource this
            * @todo idea: if there are implicit changes with attributions, rerender the editor

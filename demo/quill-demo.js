@@ -103,9 +103,11 @@ const editor = new Quill(editorContainer, {
  */
 
 const ydoc = new Y.Doc()
-const providerYdoc = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, ydoc, { connect: elemToggleConnect.checked })
+const providerYdoc = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, ydoc, { connect: false })
+elemToggleConnect.checked && providerYdoc.connectBc()
 const suggestionDoc = new Y.Doc()
-const providerYdocSuggestions = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName + '--suggestions', suggestionDoc, { connect: elemToggleConnect.checked})
+const providerYdocSuggestions = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName + '--suggestions', suggestionDoc, { connect: false })
+elemToggleConnect.checked && providerYdocSuggestions.connectBc()
 const am = Y.createAttributionManagerFromDiff(ydoc, suggestionDoc)
 
 // Define user name and user name
