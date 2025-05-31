@@ -1,7 +1,9 @@
 import Quill from 'quill'
 import * as t from 'lib0/testing'
+import * as prng from 'lib0/prng'
+import * as math from 'lib0/math'
 import * as Y from 'yjs'
-import { QuillBinding } from '../src/y-quill.js'
+import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
 import { register as registerSuggestionBlot } from '../src/blots/suggestion.js'
 import { registry, embeds } from './utils.js'
 
@@ -47,10 +49,10 @@ const createQuillEditor = (ydoc = new Y.Doc()) => {
       localEditor: editor.getContents().ops,
       remoteEditor: remoteEditor.getContents().ops
     })
-    t.compare(editor.getContents().ops, remoteEditor.getContents().ops)
+    t.compare(normQuillDelta(editor.getContents().ops), normQuillDelta(remoteEditor.getContents().ops))
   }
   return {
-    editor, binding, suggestionYText, ytext, attributionManager, ydoc, suggestionDoc, remoteYdoc, remoteSuggestionYText, remoteEditor, remoteBinding, validate
+    editor, binding, suggestionYText, ytext, attributionManager, ydoc, suggestionDoc, remoteYdoc, remoteSuggestionYText, remoteEditor, remoteBinding, validate, remoteAttributionManager, remoteSuggestionDoc
   }
 }
 
@@ -248,3 +250,77 @@ export const testPuzzle1 = () => {
   t.compare(suggestionYText.getDelta(am).toJSON(), [{ insert: '12' }, { insert: '4', attribution: { delete: [] } }, { insert: '5' }] )
   validate()
 }
+
+/**
+ * @typedef {Object} TestData
+ * @property {string} Testdata.name
+ * @property {Y.Doc} Testdata.ydoc
+ * @property {Quill} TestData.editor
+ * @property {Y.DiffAttributionManager} TestData.am
+ */
+
+let charCounter = 0
+
+/**
+ * @type Array<function(Y.Doc,prng.PRNG,TestData):void>
+ */
+const qChanges = [
+  /**
+   * @param {Y.Doc} _y
+   * @param {prng.PRNG} gen
+   * @param {TestData} p
+   */
+  (_y, gen, p) => { // insert text
+    const insertPos = prng.int32(gen, 0, p.editor.getText().length)
+    const text = charCounter++ + prng.word(gen)
+    p.am.suggestionMode = prng.bool(gen)
+    t.info(`Insert "${text}" at pos ${insertPos}. suggestionMode: ${p.am.suggestionMode} (${p.name})`)
+    p.editor.updateContents([{ retain: insertPos }, { insert: text }])
+  },
+  /**
+   * @param {Y.Doc} _y
+   * @param {prng.PRNG} gen
+   * @param {TestData} p
+   */
+  (_y, gen, p) => { // delete text
+    const contentLen = p.editor.getText().length
+    const insertPos = prng.int32(gen, 0, contentLen)
+    const overwrite = math.min(prng.int32(gen, 0, contentLen - insertPos), 2)
+    p.am.suggestionMode = prng.bool(gen)
+    t.info(`Delete ${overwrite} chars at pos ${insertPos}. suggestionMode: ${p.am.suggestionMode} (${p.name})`)
+    p.editor.deleteText(insertPos, overwrite)
+  }
+]
+
+/**
+ * @param {t.TestCase} tc
+ */
+export const testRepeatGenerateSuggestions = tc => {
+  const iterations = 4
+  t.info('number of iterations: ' + iterations)
+  const data = createQuillEditor()
+  /**
+   * @type {Array<TestData>}
+   */
+  const users = [{
+    // local user
+    name: 'local',
+    ydoc: data.suggestionDoc,
+    am: data.attributionManager,
+    editor: data.editor
+  }, {
+    // remote user
+    name: 'remote',
+    ydoc: data.remoteSuggestionDoc,
+    am: data.remoteAttributionManager,
+    editor: data.remoteEditor
+  }]
+  for (let i = 0; i < iterations; i++) {
+    const user = prng.oneOf(tc.prng, users)
+    const qchange = prng.oneOf(tc.prng, qChanges)
+    qchange(user.ydoc, tc.prng, user)
+    data.validate()
+  }
+  data.validate()
+}
+

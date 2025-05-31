@@ -281,7 +281,8 @@ export class QuillBinding {
            */
           const removeAttributions = (ops) => { 
             ops.forEach(op => {
-              if (op.attributes != null) {
+              if (op.attributes != null && this._attributionAttributeNames.some(n => op.attributes[n] != null)) {
+                op.attributes = object.assign({}, op.attributes)
                 for (let name of this._attributionAttributeNames) {
                   delete op.attributes[name]
                 }
