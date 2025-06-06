@@ -3,6 +3,7 @@ import Delta from 'quill-delta'
 import { QuillBinding } from 'y-quill'
 import * as Y from 'yjs'
 
+import { register as registerSuggestionBlots } from '../src/blots/suggestion.js'
 import { tableEmbed } from '../src/embeds/table-embed.js'
 import TableEmbed from 'quill/modules/tableEmbed.js'
 
@@ -219,6 +220,7 @@ registry.register(
   /** @type {any} */ (TableBlot),
   /** @type {any} */ (DeltaBlot)
 )
+registerSuggestionBlots(registry)
 
 /**
  * @typedef {object} TestData

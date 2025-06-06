@@ -91,12 +91,22 @@ const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attribut
 /**
  * @param {any} attribution
  */
-const defaultAttributionToAttributes = (attribution) => ({
-  // set this by default so that these props are not inherited
-  attributionInsert: attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null,
-  attributionDelete: attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null,
-  attributionFormat: attribution?.attributes ? (Object.values(attribution.attributes).map(users => users.join(',')).join(',') || 'unknown') : null
-})
+const defaultAttributionToAttributes = (attribution) => {
+  const attributionFormat = attribution?.attributes ? (Object.values(attribution.attributes).map(users => users.join(',')).join(',') || 'unknown') : null
+  if (attribution != null && attribution.insert == null && attribution.delete == null && attributionFormat != null) {
+    return {
+      attributionFormat,
+      suggestion: 'change'
+    }
+  }
+  return {
+    // set this by default so that these props aren't inherited
+    attributionInsert: attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null,
+    attributionDelete: attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null,
+    attributionFormat,
+    suggestion: attribution && ((attribution.insert && 'change') || (attribution.delete && 'delete') || (attribution.attributes && 'change') || null)
+  }
+}
 
 export class QuillBinding {
   /**

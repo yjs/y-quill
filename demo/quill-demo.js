@@ -82,11 +82,19 @@ document.body.insertBefore(editorContainer, null)
 const editor = new Quill(editorContainer, {
   modules: {
     cursors: true,
-    toolbar: [
-      [{ header: [1, 2, false] }],
-      ['bold', 'italic', 'underline'],
-      ['image', 'code-block']
-    ],
+    toolbar: {
+      container: [
+        [{ header: [1, 2, false] }],
+        ['bold', 'italic', 'underline'],
+        ['image', 'code-block'],
+        ['suggestion']
+      ],
+      handlers: {
+        suggestion: () => {
+          console.log('accepted suggestion!!')
+        }
+      }
+    },
     history: {
       userOnly: true
     }

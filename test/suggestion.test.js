@@ -4,11 +4,11 @@ import * as prng from 'lib0/prng'
 import * as math from 'lib0/math'
 import * as Y from 'yjs'
 import { QuillBinding, normQuillDelta } from '../src/y-quill.js'
-import { register as registerSuggestionBlot } from '../src/blots/suggestion.js'
+import { register as registerSuggestionBlots } from '../src/blots/suggestion.js'
 import { registry, embeds } from './utils.js'
 import Delta from 'quill-delta'
 
-registerSuggestionBlot(registry)
+registerSuggestionBlots(registry)
 
 /**
  * @param {Y.Doc} ydoc1
@@ -63,7 +63,7 @@ export const testInsert = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   suggestionYText.insert(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   validate()
 }
 
@@ -73,7 +73,7 @@ export const testDelete = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   suggestionYText.delete(0, 6)
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown' } }, { insert: 'world\n' }])
+  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: 'world\n' }])
   validate()
 }
 
@@ -83,7 +83,7 @@ export const testDeleteSuggestedContent = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   suggestionYText.insert(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   suggestionYText.delete(6, 5)
   const editorContent2 = editor.getContents().ops
   t.compare(editorContent2, [{ insert: 'hello \n' }])
@@ -96,10 +96,10 @@ export const testDeleteSuggestedContent2 = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   suggestionYText.insert(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   editor.deleteText(6, 1)
   const editorContent2 = editor.getContents().ops
-  t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'orld', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'orld', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   validate()
 }
 
@@ -109,11 +109,11 @@ export const testDeleteSuggestedDelete = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   suggestionYText.delete(6, 5)
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: '\n' }])
   // nothing should change
   editor.deleteText(7, 1)
   const editorContent2 = editor.getContents().ops
-  t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent2, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: '\n' }])
   validate()
 }
 
@@ -123,7 +123,7 @@ export const testQuillInsert = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   editor.insertText(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   validate()
 }
 
@@ -133,7 +133,7 @@ export const testQuillDelete = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   editor.deleteText(0, 6)
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown' } }, { insert: 'world\n' }])
+  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: 'world\n' }])
   validate()
 }
 
@@ -143,7 +143,7 @@ export const testQuillDeleteSuggestedContent = () => {
   t.assert(suggestionYText.toString() === ytext.toString())
   editor.insertText(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   editor.deleteText(6, 5)
   const editorContent2 = editor.getContents().ops
   t.compare(editorContent2, [{ insert: 'hello \n' }])
@@ -156,7 +156,7 @@ export const testQuillInsertAfterSuggestion = () => {
   suggestionYText.delete(0, 6)
   editor.insertText(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown' } }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello ', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   validate()
 }
 
@@ -166,7 +166,7 @@ export const testQuillDeleteAfterSuggestion = () => {
   suggestionYText.insert(0, 'hello')
   editor.deleteText(6, 5)
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello', attributes: { attributionInsert: 'unknown' } }, { insert: ' ' }, { insert: 'world', attributes: { attributionDelete: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: ' ' }, { insert: 'world', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: '\n' }])
   validate()
 }
 
@@ -176,15 +176,15 @@ export const testQuillDeleteSuggestedContentAfterSuggestion = () => {
   suggestionYText.insert(0, 'hello')
   editor.insertText(6, 'world')
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hello', attributes: { attributionInsert: 'unknown' } }, { insert: ' ' }, { insert: 'world', attributes: { attributionInsert: 'unknown' } }, { insert: '\n' }])
+  t.compare(editorContent, [{ insert: 'hello', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: ' ' }, { insert: 'world', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: '\n' }])
   editor.deleteText(6, 5)
   const editorContent2 = editor.getContents().ops
-  t.compare(editorContent2, [{ insert: 'hello', attributes: { attributionInsert: 'unknown' } }, { insert: ' \n' }])
+  t.compare(editorContent2, [{ insert: 'hello', attributes: { attributionInsert: 'unknown', suggestion: 'change' } }, { insert: ' \n' }])
   validate()
 }
 
 export const testAcceptInsertSuggestions = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
+  const { editor, ytext, suggestionYText, attributionManager: am, validate } = createQuillEditor()
   am.suggestionMode = false
   editor.insertText(0, 'hi ')
   editor.insertText(3, 'there')
@@ -195,7 +195,7 @@ export const testAcceptInsertSuggestions = () => {
 }
 
 export const testAcceptDeleteSuggestions = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
+  const { editor, ytext, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, 'hello world')
   am.suggestionMode = false
   editor.deleteText(0, 6)
@@ -206,7 +206,7 @@ export const testAcceptDeleteSuggestions = () => {
 }
 
 export const testAcceptDeleteSuggestions2 = () => {
-  const { editor, ytext, suggestionYText, ydoc, suggestionDoc, attributionManager: am, validate } = createQuillEditor()
+  const { editor, ytext, suggestionYText, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, 'hello world')
   am.suggestionMode = false
   suggestionYText.delete(0, 6)
@@ -226,16 +226,25 @@ export const testQuillInsertNewlineAtEnd = () => {
   validate()
 }
 
+export const testQuillFormatOfSuggestion = () => {
+  const { editor, ytext, suggestionYText, validate, attributionManager } = createQuillEditor()
+  attributionManager.suggestionMode = true
+  editor.insertText(0, 'hi')
+  editor.updateContents([{ retain: 2, attributes: { bold: true } }])
+  t.compare(editor.getContents().ops[0], { insert: 'hi', attributes: { bold: true, suggestion: 'change', attributionInsert: 'unknown', attributionFormat: 'unknown' } })
+  validate()
+}
+
 export const testQuillSuggestedFormatting = () => {
   const { editor, ytext, suggestionYText, validate } = createQuillEditor()
   ytext.insert(0, 'hello world!')
   editor.updateContents([{ retain: 6 }, { retain: 5, attributes: { bold: true } }])
   suggestionYText.format(0, 3, { italic: true })
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
+  t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: '!\n' }])
   editor.updateContents([{ retain: 0 }, { insert: 'XXX', attributes: { bold: true } }])
   const editorContent2 = editor.getContents().ops
-  t.compare(editorContent2, [{ insert: 'XXX', attributes: { bold: true, attributionInsert: 'unknown', attributionFormat: 'unknown' } }, { insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
+  t.compare(editorContent2, [{ insert: 'XXX', attributes: { bold: true, attributionInsert: 'unknown', attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: '!\n' }])
   validate()
 }
 
@@ -247,7 +256,7 @@ export const testPuzzle1 = () => {
   editor.updateContents([{ retain: 3 }, { delete: 1 }])
   editor.updateContents([{ retain: 2 }, { delete: 1 }])
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: '12' }, { insert: '4', attributes: { attributionDelete: 'unknown' } }, { insert: '5\n' }])
+  t.compare(editorContent, [{ insert: '12' }, { insert: '4', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: '5\n' }])
   t.compare(suggestionYText.getDelta(am).toJSON(), [{ insert: '12' }, { insert: '4', attribution: { delete: [] } }, { insert: '5' }] )
   validate()
 }
