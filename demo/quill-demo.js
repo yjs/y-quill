@@ -45,7 +45,7 @@ elemToggleShowSuggestions.addEventListener('change', () => initEditorBinding())
 
 // when in suggestion-mode, we should use a different clientId to reduce some overhead. This is not
 // strictly necessary.
-let otherClientID = random.uint53() 
+let otherClientID = random.uint53()
 elemToggleSuggestMode.addEventListener('change', () => {
   const enabled = elemToggleSuggestMode.checked
   am.suggestionMode = enabled
@@ -55,7 +55,7 @@ elemToggleSuggestMode.addEventListener('change', () => {
   } else {
     elemToggleShowSuggestions.disabled = false
   }
-  let nextClientId = otherClientID
+  const nextClientId = otherClientID
   otherClientID = suggestionDoc.clientID
   suggestionDoc.clientID = nextClientId
   initEditorBinding()
@@ -87,11 +87,23 @@ const editor = new Quill(editorContainer, {
         [{ header: [1, 2, false] }],
         ['bold', 'italic', 'underline'],
         ['image', 'code-block'],
-        ['suggestion']
+        [{ suggestion: 'accept' }, { suggestion: 'reject' }]
       ],
       handlers: {
-        suggestion: () => {
-          console.log('accepted suggestion!!')
+        /**
+         * @param {string} action
+         */
+        suggestion: function (action) {
+          switch (action) {
+            case 'accept': {
+              console.log('accepted suggestion')
+              break
+            }
+            case 'reject': {
+              console.log('rejected suggestion :(')
+              break
+            }
+          }
         }
       }
     },

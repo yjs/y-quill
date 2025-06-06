@@ -15,3 +15,12 @@
     text-decoration-style: wavy;
   }
 }
+
+.ql-toolbar {
+  .ql-suggestion[value="accept"]:after {
+    content: '✅';
+  }
+  .ql-suggestion[value="reject"]:after {
+    content: '❌';
+  }
+}
