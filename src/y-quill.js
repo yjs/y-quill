@@ -84,7 +84,7 @@ const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attribut
  * @template {Y.XmlElement} YType
  * @typedef {Object} QuillBindingOpts
  * @property {{ [k:string]: EmbedDef<EmbedDelta,YType> }} [QuillBindingOpts.embeds]
- * @property {Y.AbstractAttributionManager} [QuillBindingOpts.attributionManager]
+ * @property {Y.DiffAttributionManager|Y.noAttributionsManager} [QuillBindingOpts.attributionManager]
  * @property {(attributions:any)=>Object<string,any>} [QuillBindingOpts.attributionToAttributes]
  */
 
@@ -444,6 +444,18 @@ export class QuillBinding {
     this._onAttrChange = this.attributionManager.on('change', (changes) => {
       quill.updateContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager, { itemsToRender: changes, retainInserts: true, retainDeletes: true })), this)
     })
+  }
+
+  /**
+   * @param {number} start
+   * @param {number} end
+   */
+  acceptChangesAt (start, end = start) {
+    const startId = Y.createRelativePositionFromTypeIndex(this.type, start, 0, this.attributionManager).item
+    const endId = start === end ? startId : Y.createRelativePositionFromTypeIndex(this.type, end, 0, this.attributionManager).item
+    if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null) {
+      this.attributionManager.acceptChanges(startId, endId)
+    }
   }
 
   /**

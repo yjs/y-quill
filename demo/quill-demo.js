@@ -91,11 +91,15 @@ const editor = new Quill(editorContainer, {
       ],
       handlers: {
         /**
-         * @param {string} action
+         * @type {function(this:{quill: Quill}, string):void}
          */
         suggestion: function (action) {
           switch (action) {
             case 'accept': {
+              const sel = this.quill.getSelection(false)
+              if (sel != null) {
+                currentBinding?.acceptChangesAt(sel.index, sel.index + sel.length)
+              }
               console.log('accepted suggestion')
               break
             }
