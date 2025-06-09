@@ -339,7 +339,7 @@ const qChanges = [
  * @param {t.TestCase} tc
  */
 export const testRepeatGenerateSuggestions = tc => {
-  const iterations = 40
+  const iterations = 42
   t.info('number of iterations: ' + iterations)
   const data = createQuillEditor()
   /**

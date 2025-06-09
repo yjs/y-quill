@@ -92,19 +92,20 @@ const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attribut
  * @param {any} attribution
  */
 const defaultAttributionToAttributes = (attribution) => {
-  const attributionFormat = attribution?.attributes ? (Object.values(attribution.attributes).map(users => users.join(',')).join(',') || 'unknown') : null
-  if (attribution != null && attribution.insert == null && attribution.delete == null && attributionFormat != null) {
+  const attributionFormat = attribution?.attributes ? (Array.from(new Set(Object.values(attribution.attributes).flat())).join(',') || 'unknown') : null
+  const attributionInsert = attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null
+  const attributionDelete = attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null
+  const suggestion = attribution && ((attribution.insert && 'change') || (attribution.delete && 'delete') || null)
+  if (attributionFormat && attributionInsert == null && attributionDelete == null) {
     return {
-      attributionFormat,
-      suggestion: 'change'
+      attributionFormat
     }
   }
   return {
-    // set this by default so that these props aren't inherited
-    attributionInsert: attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null,
-    attributionDelete: attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null,
     attributionFormat,
-    suggestion: attribution && ((attribution.insert && 'change') || (attribution.delete && 'delete') || (attribution.attributes && 'change') || null)
+    attributionInsert,
+    attributionDelete,
+    suggestion
   }
 }
 
