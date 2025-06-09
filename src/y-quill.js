@@ -5,6 +5,7 @@
 import * as Y from 'yjs' // eslint-disable-line
 import * as object from 'lib0/object'
 import Delta from 'quill-delta'
+import { ID } from 'yjs'
 
 /**
  * @typedef {import('y-protocols/awareness').Awareness} Awareness
@@ -109,6 +110,31 @@ const defaultAttributionToAttributes = (attribution) => {
   }
 }
 
+/**
+ * Only meant to be used by acceptSuggesiton & rejectSuggestion.
+ *
+ * Get relative ids for accepting / rejecting changes.
+ *
+ * @param {QuillBinding} binding
+ * @param {number} start
+ * @param {number} end
+ * @return {{ startId: ID, endId: ID }}
+ */
+export const indexRangeToRelRange = (binding, start, end) => {
+  const startId = /** @type {ID} */ (Y.createRelativePositionFromTypeIndex(binding.type, start, 0, binding.attributionManager).item || binding.type._start?.id)
+  /**
+   * @type {ID?}
+   */
+  let endId = null
+  if (start !== end) {
+    endId = Y.createRelativePositionFromTypeIndex(binding.type, end, 0, binding.attributionManager).item
+    if (endId == null) {
+      endId = Y.createRelativePositionFromTypeIndex(binding.type, end, -1, binding.attributionManager).item
+    }
+  }
+  return { startId, endId: endId || startId }
+}
+
 export class QuillBinding {
   /**
    * @param {Y.Text} type
@@ -147,7 +173,7 @@ export class QuillBinding {
         }
         return op
       })
-      console.log('generated delta', res)
+      console.log('generated delta', res, 'from ychange: ', d.toJSON())
       return res
     }
     // This object contains all attributes used in the quill instance
@@ -452,8 +478,7 @@ export class QuillBinding {
    * @param {number} end
    */
   acceptChangesAt (start, end = start) {
-    const startId = Y.createRelativePositionFromTypeIndex(this.type, start, 0, this.attributionManager).item
-    const endId = start === end ? startId : Y.createRelativePositionFromTypeIndex(this.type, end, 0, this.attributionManager).item
+    const { startId, endId } = indexRangeToRelRange(this, start, end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.acceptChanges(startId, endId)
     }
@@ -464,8 +489,7 @@ export class QuillBinding {
    * @param {number} end
    */
   rejectChangesAt (start, end = start) {
-    const startId = Y.createRelativePositionFromTypeIndex(this.type, start, 0, this.attributionManager).item
-    const endId = start === end ? startId : Y.createRelativePositionFromTypeIndex(this.type, end, 0, this.attributionManager).item
+    const { startId, endId } = indexRangeToRelRange(this, start, end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.rejectChanges(startId, endId)
     }
