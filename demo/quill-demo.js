@@ -104,6 +104,10 @@ const editor = new Quill(editorContainer, {
               break
             }
             case 'reject': {
+              const sel = this.quill.getSelection(false)
+              if (sel != null) {
+                currentBinding?.rejectChangesAt(sel.index, sel.index + sel.length)
+              }
               console.log('rejected suggestion :(')
               break
             }

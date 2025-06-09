@@ -453,8 +453,20 @@ export class QuillBinding {
   acceptChangesAt (start, end = start) {
     const startId = Y.createRelativePositionFromTypeIndex(this.type, start, 0, this.attributionManager).item
     const endId = start === end ? startId : Y.createRelativePositionFromTypeIndex(this.type, end, 0, this.attributionManager).item
-    if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null) {
+    if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.acceptChanges(startId, endId)
+    }
+  }
+
+  /**
+   * @param {number} start
+   * @param {number} end
+   */
+  rejectChangesAt (start, end = start) {
+    const startId = Y.createRelativePositionFromTypeIndex(this.type, start, 0, this.attributionManager).item
+    const endId = start === end ? startId : Y.createRelativePositionFromTypeIndex(this.type, end, 0, this.attributionManager).item
+    if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
+      this.attributionManager.rejectChanges(startId, endId)
     }
   }
 

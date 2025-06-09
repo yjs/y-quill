@@ -248,6 +248,17 @@ export const testQuillSuggestedFormatting = () => {
   validate()
 }
 
+export const testSuggestionReject = () => {
+  const { editor, ytext, suggestionYText, attributionManager: am, binding, validate } = createQuillEditor()
+  ytext.insert(0, '12345')
+  am.suggestionMode = true
+  editor.updateContents([{ retain: 2 }, { insert: 'X' }, { delete: 2 }])
+  binding.rejectChangesAt(2)
+  const editorContent = editor.getContents().ops
+  t.compare(editorContent, [{ insert: '12345\n' }])
+  validate()
+}
+
 export const testPuzzle1 = () => {
   const { editor, ytext, suggestionYText, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, '12345')
