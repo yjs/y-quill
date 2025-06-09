@@ -227,7 +227,7 @@ export const testQuillInsertNewlineAtEnd = () => {
 }
 
 export const testQuillFormatOfSuggestion = () => {
-  const { editor, ytext, suggestionYText, validate, attributionManager } = createQuillEditor()
+  const { editor, validate, attributionManager } = createQuillEditor()
   attributionManager.suggestionMode = true
   editor.insertText(0, 'hi')
   editor.updateContents([{ retain: 2, attributes: { bold: true } }])
@@ -249,7 +249,7 @@ export const testQuillSuggestedFormatting = () => {
 }
 
 export const testSuggestionReject = () => {
-  const { editor, ytext, suggestionYText, attributionManager: am, binding, validate } = createQuillEditor()
+  const { editor, ytext, attributionManager: am, binding, validate } = createQuillEditor()
   ytext.insert(0, '12345')
   am.suggestionMode = true
   editor.updateContents([{ retain: 2 }, { insert: 'X' }, { delete: 2 }])
@@ -278,6 +278,7 @@ export const testPuzzle1 = () => {
  * @property {Y.Doc} Testdata.ydoc
  * @property {Quill} TestData.editor
  * @property {Y.DiffAttributionManager} TestData.am
+ * @property {QuillBinding} TestData.binding
  */
 
 let charCounter = 0
@@ -332,6 +333,23 @@ const qChanges = [
     p.am.suggestionMode = prng.bool(gen)
     t.info(`Format ${overwrite} chars ${JSON.stringify(format)} at pos ${insertPos}. suggestionMode: ${p.am.suggestionMode} (${p.name})`)
     p.editor.updateContents(new Delta().retain(insertPos).retain(overwrite, format))
+  },
+  /**
+   * @param {Y.Doc} _y
+   * @param {prng.PRNG} gen
+   * @param {TestData} p
+   */
+  (_y, gen, p) => { // accept / reject a change
+    const contentLen = p.editor.getText().length
+    const insertPos = prng.int32(gen, 0, contentLen)
+    p.am.suggestionMode = prng.bool(gen)
+    const accept = prng.bool(gen)
+    t.info(`${accept ? 'Accept' : 'Reject'} change at pos ${insertPos}. suggestionMode: ${p.am.suggestionMode} (${p.name})`)
+    if (accept) {
+      p.binding.acceptChangesAt(insertPos)
+    } else {
+      p.binding.rejectChangesAt(insertPos)
+    }
   }
 ]
 
@@ -350,13 +368,15 @@ export const testRepeatGenerateSuggestions = tc => {
     name: 'local',
     ydoc: data.suggestionDoc,
     am: data.attributionManager,
-    editor: data.editor
+    editor: data.editor,
+    binding: data.binding
   }, {
     // remote user
     name: 'remote',
     ydoc: data.remoteSuggestionDoc,
     am: data.remoteAttributionManager,
-    editor: data.remoteEditor
+    editor: data.remoteEditor,
+    binding: data.remoteBinding
   }]
   qChanges[0](users[0].ydoc, tc.prng, users[0])
   for (let i = 0; i < iterations; i++) {
