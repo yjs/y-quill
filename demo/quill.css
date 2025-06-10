@@ -10,14 +10,14 @@
   [data-attribution-insert] {
     background-color: var(--suggestion-insert-color);
   }
-  [data-attribution-delete] {
-    color: grey;
-    text-decoration: line-through;
-  }
   [data-attribution-format] {
     text-decoration: underline;
     text-decoration-style: wavy;
     text-decoration-color: var(--suggestion-insert-color);
+  }
+  [data-attribution-delete] {
+    color: grey;
+    text-decoration: line-through;
   }
 }
 

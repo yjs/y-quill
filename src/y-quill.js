@@ -24,6 +24,7 @@ export const normQuillDelta = delta => {
   while (delta.length > 0) {
     const d = delta[delta.length - 1]
     const insert = d.insert
+    delete d.attributes?.attributionFormat
     if ((d.attributes == null || object.isEmpty(d.attributes)) && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
       delta = delta.slice()
       let ins = insert.slice(0, -1)
@@ -96,7 +97,7 @@ const defaultAttributionToAttributes = (attribution) => {
   const attributionFormat = attribution?.attributes ? (Array.from(new Set(Object.values(attribution.attributes).flat())).join(',') || 'unknown') : null
   const attributionInsert = attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null
   const attributionDelete = attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null
-  const suggestion = attribution ? ((attribution.insert && 'change') || (attribution.delete && 'delete') || null) : null
+  const suggestion = attribution ? ((attribution.insert && 'insert') || (attribution.delete && 'delete') || null) : null
   if ( attributionInsert == null && attributionDelete == null && (attribution == null || attributionFormat != null)) {
     return {
       attributionFormat

@@ -13,12 +13,17 @@ import { createQuillEditor } from './utils.js'
  * @typedef {import('./utils.js').TestData} TestData
  */
 
+/**
+ * Tests a bunch of edge-cases around newlines.
+ * An implicit change is created when inserting a newline at the end of the document. y-quill is
+ * supposed to properly normalize the delta before calculating a diff.
+ */
 export const testNewline = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)
   const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
   editor.updateContents([{ insert: '\n' }])
-  t.compare(editor.getContents().ops, [{ insert: '\n' }]) // \n\n is also fine
+  t.compare(editor.getContents().ops, [{ insert: '\n\n' }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
   t.compare(type.toString(), '\n')
   t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
