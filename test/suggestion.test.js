@@ -241,10 +241,10 @@ export const testQuillSuggestedFormatting = () => {
   editor.updateContents([{ retain: 6 }, { retain: 5, attributes: { bold: true } }])
   suggestionYText.format(0, 3, { italic: true })
   const editorContent = editor.getContents().ops
-  t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: '!\n' }])
+  t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
   editor.updateContents([{ retain: 0 }, { insert: 'XXX', attributes: { bold: true } }])
   const editorContent2 = editor.getContents().ops
-  t.compare(editorContent2, [{ insert: 'XXX', attributes: { bold: true, attributionInsert: 'unknown', attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown', suggestion: 'change' } }, { insert: '!\n' }])
+  t.compare(editorContent2, [{ insert: 'XXX', attributes: { bold: true, attributionInsert: 'unknown', attributionFormat: 'unknown', suggestion: 'change' } }, { insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
   validate()
 }
 

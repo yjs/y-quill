@@ -90,14 +90,14 @@ const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attribut
  */
 
 /**
- * @param {any} attribution
+ * @param {Object<string,any>|null} attribution
  */
 const defaultAttributionToAttributes = (attribution) => {
   const attributionFormat = attribution?.attributes ? (Array.from(new Set(Object.values(attribution.attributes).flat())).join(',') || 'unknown') : null
   const attributionInsert = attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null
   const attributionDelete = attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null
-  const suggestion = attribution && ((attribution.insert && 'change') || (attribution.delete && 'delete') || null)
-  if (attributionFormat && attributionInsert == null && attributionDelete == null) {
+  const suggestion = attribution ? ((attribution.insert && 'change') || (attribution.delete && 'delete') || null) : null
+  if ( attributionInsert == null && attributionDelete == null && (attribution == null || attributionFormat != null)) {
     return {
       attributionFormat
     }
@@ -167,10 +167,12 @@ export class QuillBinding {
             op.insert = { [embedName]: embedDef.typeToDelta(op.insert) }
           }
         }
-        if ((op.insert != null && explicitAttributions) || op.attribution != null) {
-          op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
-          delete op.attribution
-        }
+        op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
+        delete op.attribution
+        // if ((op.insert != null && explicitAttributions) || op.attribution != null) {
+        //   op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
+        //   delete op.attribution
+        // }
         return op
       })
       console.log('generated delta', res, 'from ychange: ', d.toJSON())
