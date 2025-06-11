@@ -269,6 +269,29 @@ export const testSuggestionAcceptPartialFormat1 = () => {
   validate()
 }
 
+export const testSuggestionAcceptOverlapFormat = () => {
+  const { editor, ytext, attributionManager: am, binding, suggestionYText, validate } = createQuillEditor()
+  ytext.insert(0, '12345')
+  am.suggestionMode = false
+  editor.updateContents([{ retain: 2, attributes: { bold: true } }, { retain: 1 }, { retain: 2, attributes: { bold: true } }])
+  am.suggestionMode = true
+  editor.updateContents([{ retain: 1 }, { delete: 3 }]) // delete "234"
+  t.compare(normQuillDelta(editor.getContents().ops), [
+    { insert: '1', attributes: { bold: true } },
+    { insert: '2', attributes: { bold: true, suggestion: 'delete', attributionDelete: 'unknown' } },
+    { insert: '3', attributes: { suggestion: 'delete', attributionDelete: 'unknown' } },
+    { insert: '4', attributes: { bold: true, suggestion: 'delete', attributionDelete: 'unknown' } },
+    { insert: '5', attributes: { bold: true } },
+  ])
+  binding.acceptChangesAt(2, 2)
+  t.compare(ytext.getContent(am).toJSON(), [{ insert: '15', attributes: { bold: true } }])
+  t.compare(normQuillDelta(editor.getContents().ops), [
+    { insert: '15', attributes: { bold: true } }
+  ])
+
+  validate()
+}
+
 export const testPuzzle1 = () => {
   const { editor, ytext, suggestionYText, attributionManager: am, validate } = createQuillEditor()
   ytext.insert(0, '12345')

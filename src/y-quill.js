@@ -23,8 +23,7 @@ export const normQuillDelta = delta => {
   while (delta.length > 0) {
     const d = delta[delta.length - 1]
     const insert = d.insert
-    delete d.attributes?.attributionFormat
-    if ((d.attributes == null || object.isEmpty(d.attributes)) && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
+    if ((d.attributes == null || object.isEmpty(d.attributes) || (object.size(d.attributes) === 1 && d.attributes.attributionFormat !== undefined)) && insert !== undefined && insert.constructor === String && insert.slice(-1) === '\n') {
       delta = delta.slice()
       let ins = insert.slice(0, -1)
       while (ins.slice(-1) === '\n') {
@@ -228,7 +227,7 @@ export class QuillBinding {
             op.insert = { [embedName]: embedDef.typeToDelta(op.insert) }
           }
         }
-        op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
+        op.attributes = object.assign({}, op.attributes, this._attributionToAttributes(op.attribution))
         delete op.attribution
         // if ((op.insert != null && explicitAttributions) || op.attribution != null) {
         //   op.attributes = object.assign(op.attributes ?? {}, this._attributionToAttributes(op.attribution))
