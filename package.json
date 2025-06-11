@@ -60,21 +60,21 @@
   "peerDependencies": {
     "quill": "^2.0.0",
     "quill-cursors": "^4.0.2",
-    "yjs": "^13.6.14"
+    "yjs": "14.0.0-*"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
-    "rollup": "^4.41.0",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.5.5",
+    "@y/protocols": "^1.0.6-1",
+    "@y/websocket": "^4.0.0-1",
     "concurrently": "^8.2.2",
     "jsdom": "^24.0.0",
     "quill": "^2.0.2",
+    "rollup": "^4.41.0",
     "standard": "^17.1.0",
-    "typescript": "^5.4.5",
-    "y-protocols": "^1.0.6",
-    "y-websocket": "^3.0.0",
-    "yjs": "^13.6.19"
+    "typescript": "^5.8.3",
+    "yjs": "^14.0.0-6"
   }
 }

@@ -270,7 +270,7 @@ export const testSuggestionAcceptPartialFormat1 = () => {
 }
 
 export const testSuggestionAcceptOverlapFormat = () => {
-  const { editor, ytext, attributionManager: am, binding, suggestionYText, validate } = createQuillEditor()
+  const { editor, ytext, attributionManager: am, binding, validate } = createQuillEditor()
   ytext.insert(0, '12345')
   am.suggestionMode = false
   editor.updateContents([{ retain: 2, attributes: { bold: true } }, { retain: 1 }, { retain: 2, attributes: { bold: true } }])
@@ -281,7 +281,7 @@ export const testSuggestionAcceptOverlapFormat = () => {
     { insert: '2', attributes: { bold: true, suggestion: 'delete', attributionDelete: 'unknown' } },
     { insert: '3', attributes: { suggestion: 'delete', attributionDelete: 'unknown' } },
     { insert: '4', attributes: { bold: true, suggestion: 'delete', attributionDelete: 'unknown' } },
-    { insert: '5', attributes: { bold: true } },
+    { insert: '5', attributes: { bold: true } }
   ])
   binding.acceptChangesAt(2, 2)
   t.compare(ytext.getContent(am).toJSON(), [{ insert: '15', attributes: { bold: true } }])

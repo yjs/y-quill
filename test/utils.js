@@ -251,7 +251,7 @@ export const embeds = {
         yxml.setAttribute('ytext', new Y.Text())
       }
       const ytext = yxml.getAttribute('ytext')
-      ytext?.applyDelta(op)
+      ytext?.applyDelta(/** @type {any} */ (op))
     },
 
     /**

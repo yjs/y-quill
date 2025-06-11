@@ -265,7 +265,7 @@ const qChanges = [
  */
 const applyRandomTests = (tc, mods, iterations, initTestObject) => {
   const gen = tc.prng
-  const result = init(tc, { users: 5 }, initTestObject)
+  const result = init(tc, { users: 5 }, /** @type {any} */ (initTestObject))
   const { testConnector, users } = result
   for (let i = 0; i < iterations; i++) {
     if (prng.int32(gen, 0, 100) <= 2) {
@@ -284,7 +284,7 @@ const applyRandomTests = (tc, mods, iterations, initTestObject) => {
     }
     const user = prng.int32(gen, 0, users.length - 1)
     const test = prng.oneOf(gen, mods)
-    test(users[user], gen, result.testObjects[user])
+    test(/** @type {any} */ (users[user]), gen, result.testObjects[user])
     users.forEach(/** @param {any} u */ u => u.connect())
     while (users[0].tc.flushAllMessages()) {} // eslint-disable-line
   }

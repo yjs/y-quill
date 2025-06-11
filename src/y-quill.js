@@ -7,7 +7,7 @@ import * as object from 'lib0/object'
 import Delta from 'quill-delta'
 
 /**
- * @typedef {import('y-protocols/awareness').Awareness} Awareness
+ * @typedef {import('@y/protocols/awareness').Awareness} Awareness
  */
 
 /**
