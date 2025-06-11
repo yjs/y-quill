@@ -5,7 +5,6 @@
 import * as Y from 'yjs' // eslint-disable-line
 import * as object from 'lib0/object'
 import Delta from 'quill-delta'
-import { ID } from 'yjs'
 
 /**
  * @typedef {import('y-protocols/awareness').Awareness} Awareness
@@ -98,7 +97,7 @@ const defaultAttributionToAttributes = (attribution) => {
   const attributionInsert = attribution?.insert ? (attribution.insert.join(',') || 'unknown') : null
   const attributionDelete = attribution?.delete ? (attribution.delete.join(',') || 'unknown') : null
   const suggestion = attribution ? ((attribution.insert && 'insert') || (attribution.delete && 'delete') || null) : null
-  if ( attributionInsert == null && attributionDelete == null && (attribution == null || attributionFormat != null)) {
+  if (attributionInsert == null && attributionDelete == null && (attribution == null || attributionFormat != null)) {
     return {
       attributionFormat
     }
@@ -112,6 +111,67 @@ const defaultAttributionToAttributes = (attribution) => {
 }
 
 /**
+ * @param {{ insert: string|Object }} op
+ */
+const getDeltaInsertOpLength = op =>
+  op.insert.constructor === String ? op.insert.length : 1
+
+/**
+ * @param {{ attributes?: Object<string,any> }} op
+ */
+const isSuggestionOp = op =>
+  op.attributes?.suggestion != null || op.attributes?.attributionFormat != null
+
+/**
+ * Inspect the quill editor state and extend the range to include as much of the suggestions as
+ * possible. Example: if range=[3,3] and ops=[{ insert: 'abcde', attributes: { suggestion: 'insert' } }], then
+ * the range will be extended to [0,5] (start and end index)
+ *
+ * @param {QuillBinding} binding
+ * @param {number} start
+ * @param {number} end
+ */
+export const extendtoSuggestionRange = (binding, start, end) => {
+  const delta = binding.quill.getContents().ops
+  let startDeltaIndex = 0
+  let endDeltaIndex = 0
+  let remainingLen = start
+  for (; startDeltaIndex < delta.length; startDeltaIndex++) {
+    const opLen = getDeltaInsertOpLength(delta[startDeltaIndex])
+    if (remainingLen <= opLen) {
+      // break early (this is slightly different for endDeltaIndex)
+      break
+    }
+    remainingLen -= opLen
+  }
+  if (isSuggestionOp(delta[startDeltaIndex])) {
+    start -= remainingLen
+    startDeltaIndex--
+  }
+  while (startDeltaIndex >= 0 && isSuggestionOp(delta[startDeltaIndex])) {
+    start -= getDeltaInsertOpLength(delta[startDeltaIndex--])
+  }
+  // now do the same for end
+  remainingLen = end
+  for (; endDeltaIndex < delta.length; endDeltaIndex++) {
+    const opLen = getDeltaInsertOpLength(delta[endDeltaIndex])
+    if (remainingLen < opLen) {
+      // break after jumping over one last delta (this is slightly different for startDeltaIndex)
+      break
+    }
+    remainingLen -= opLen
+  }
+  if (isSuggestionOp(delta[endDeltaIndex])) {
+    end += getDeltaInsertOpLength(delta[endDeltaIndex]) - remainingLen
+    endDeltaIndex++
+  }
+  while (endDeltaIndex < delta.length && isSuggestionOp(delta[endDeltaIndex])) {
+    end += getDeltaInsertOpLength(delta[endDeltaIndex++])
+  }
+  return { start, end }
+}
+
+/**
  * Only meant to be used by acceptSuggesiton & rejectSuggestion.
  *
  * Get relative ids for accepting / rejecting changes.
@@ -119,12 +179,12 @@ const defaultAttributionToAttributes = (attribution) => {
  * @param {QuillBinding} binding
  * @param {number} start
  * @param {number} end
- * @return {{ startId: ID, endId: ID }}
+ * @return {{ startId: Y.ID, endId: Y.ID }}
  */
 export const indexRangeToRelRange = (binding, start, end) => {
-  const startId = /** @type {ID} */ (Y.createRelativePositionFromTypeIndex(binding.type, start, 0, binding.attributionManager).item || binding.type._start?.id)
+  const startId = /** @type {Y.ID} */ (Y.createRelativePositionFromTypeIndex(binding.type, start, 0, binding.attributionManager).item || binding.type._start?.id)
   /**
-   * @type {ID?}
+   * @type {Y.ID?}
    */
   let endId = null
   if (start !== end) {
@@ -319,11 +379,11 @@ export class QuillBinding {
            *
            * @param {Array<any>} ops
            */
-          const removeAttributions = (ops) => { 
+          const removeAttributions = (ops) => {
             ops.forEach(op => {
               if (op.attributes != null && this._attributionAttributeNames.some(n => op.attributes[n] != null)) {
                 op.attributes = object.assign({}, op.attributes)
-                for (let name of this._attributionAttributeNames) {
+                for (const name of this._attributionAttributeNames) {
                   delete op.attributes[name]
                 }
               }
@@ -360,7 +420,7 @@ export class QuillBinding {
         const changes = new Delta()
         ops.forEach(op => {
           if (op.attributes !== undefined) {
-            for (let name of this._attributionAttributeNames) {
+            for (const name of this._attributionAttributeNames) {
               delete op.attributes[name]
             }
             for (const key in op.attributes) {
@@ -392,7 +452,7 @@ export class QuillBinding {
             type.applyDelta(changes.ops, this.attributionManager)
             const attributedDeletes = tr.meta.get('attributedDeletes')
             if (attributedDeletes) {
-              quill.updateContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager, { itemsToRender: attributedDeletes, retainInserts: true, retainDeletes: false})), this)
+              quill.updateContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager, { itemsToRender: attributedDeletes, retainInserts: true, retainDeletes: false })), this)
             }
             let item = type._start
             /**
@@ -481,7 +541,9 @@ export class QuillBinding {
    * @param {number} end
    */
   acceptChangesAt (start, end = start) {
-    const { startId, endId } = indexRangeToRelRange(this, start, end)
+    const extendedRange = extendtoSuggestionRange(this, start, end)
+    console.log('extended range from ', { start, end }, ' to ', extendedRange)
+    const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.acceptChanges(startId, endId)
     }
@@ -492,7 +554,9 @@ export class QuillBinding {
    * @param {number} end
    */
   rejectChangesAt (start, end = start) {
-    const { startId, endId } = indexRangeToRelRange(this, start, end)
+    const extendedRange = extendtoSuggestionRange(this, start, end)
+    console.log('extended range from ', { start, end }, ' to ', extendedRange)
+    const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.rejectChanges(startId, endId)
     }

@@ -42,7 +42,7 @@ const createQuillEditor = (ydoc = new Y.Doc()) => {
   const remoteEditor = new Quill(document.createElement('div'), { registry })
   const remoteBinding = new QuillBinding(remoteSuggestionYText, remoteEditor, undefined, { embeds, attributionManager: remoteAttributionManager })
   const validate = () => {
-    console.log({ 
+    console.log({
       localtextcontent: suggestionYText.getDelta(attributionManager).toJSON(),
       remoteytextcontent: remoteSuggestionYText.getDelta(remoteAttributionManager).toJSON(),
       localNoS: ytext.getDelta(attributionManager).toJSON(),
@@ -265,7 +265,7 @@ export const testSuggestionAcceptPartialFormat1 = () => {
   am.suggestionMode = true
   editor.updateContents([{ retain: 2 }, { retain: 2, attributes: { bold: true } }])
   binding.acceptChangesAt(1, 3)
-  t.compare(ytext.getContent(am).toJSON(), [{ insert: '12' }, { insert: '34', attributes: { bold: true }}, { insert: '5' }])
+  t.compare(ytext.getContent(am).toJSON(), [{ insert: '12' }, { insert: '34', attributes: { bold: true } }, { insert: '5' }])
   validate()
 }
 
@@ -278,7 +278,7 @@ export const testPuzzle1 = () => {
   editor.updateContents([{ retain: 2 }, { delete: 1 }])
   const editorContent = editor.getContents().ops
   t.compare(editorContent, [{ insert: '12' }, { insert: '4', attributes: { attributionDelete: 'unknown', suggestion: 'delete' } }, { insert: '5\n' }])
-  t.compare(suggestionYText.getDelta(am).toJSON(), [{ insert: '12' }, { insert: '4', attribution: { delete: [] } }, { insert: '5' }] )
+  t.compare(suggestionYText.getDelta(am).toJSON(), [{ insert: '12' }, { insert: '4', attribution: { delete: [] } }, { insert: '5' }])
   validate()
 }
 
@@ -299,7 +299,6 @@ const marksChoices = [
   { italic: true },
   { italic: true, color: '#888' }
 ]
-
 
 /**
  * @type Array<function(Y.Doc,prng.PRNG,TestData):void>
@@ -397,4 +396,3 @@ export const testRepeatGenerateSuggestions = tc => {
   }
   data.validate()
 }
-
