@@ -288,7 +288,26 @@ export const testSuggestionAcceptOverlapFormat = () => {
   t.compare(normQuillDelta(editor.getContents().ops), [
     { insert: '15', attributes: { bold: true } }
   ])
+  validate()
+}
 
+export const testSuggestionAcceptOverlapFormat2 = () => {
+  const { editor, ytext, attributionManager: am, binding, validate } = createQuillEditor()
+  ytext.insert(0, '123456')
+  am.suggestionMode = false
+  editor.updateContents([{ retain: 2, attributes: { bold: true } }, { retain: 1 }, { retain: 2, attributes: { bold: true } }])
+  am.suggestionMode = true
+  editor.updateContents([{ retain: 1 }, { retain: 3, attributes: { bold: true } }]) // bolden "234"
+  t.compare(normQuillDelta(editor.getContents().ops), [
+    { insert: '12', attributes: { bold: true } },
+    { insert: '345', attributes: { bold: true, attributionFormat: 'unknown' } }, // actually, it should be only 3 that it attributed. 345 is fine too
+    { insert: '6' }
+  ])
+  binding.acceptChangesAt(2, 2)
+  t.compare(ytext.getContent(am).toJSON(), [{ insert: '12345', attributes: { bold: true } }, { insert: '6' }])
+  t.compare(normQuillDelta(editor.getContents().ops), [
+    { insert: '12345', attributes: { bold: true } }, { insert: '6' }
+  ])
   validate()
 }
 
