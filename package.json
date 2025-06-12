@@ -1,6 +1,6 @@
 {
-  "name": "y-quill",
-  "version": "1.0.0",
+  "name": "@y/quill",
+  "version": "2.0.0-0",
   "description": "QuillJs bindings for Yjs",
   "main": "./dist/y-quill.cjs",
   "module": "./src/y-quill.js",
@@ -60,7 +60,7 @@
   "peerDependencies": {
     "quill": "^2.0.0",
     "quill-cursors": "^4.0.2",
-    "yjs": "14.0.0-*"
+    "yjs": "^14.0.0-7"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
@@ -75,6 +75,6 @@
     "rollup": "^4.41.0",
     "standard": "^17.1.0",
     "typescript": "^5.8.3",
-    "yjs": "^14.0.0-6"
+    "yjs": "^14.0.0-7"
   }
 }

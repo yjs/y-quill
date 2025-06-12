@@ -2,7 +2,7 @@
 
 import * as Y from 'yjs'
 import * as error from 'lib0/error'
-import { QuillBinding } from 'y-quill'
+import { QuillBinding } from '@y/quill'
 import { WebsocketProvider } from '@y/websocket'
 import Delta from 'quill-delta'
 import Quill from 'quill'
