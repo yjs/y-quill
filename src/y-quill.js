@@ -538,7 +538,7 @@ export class QuillBinding {
    * @param {number} start
    * @param {number} end
    */
-  acceptChangesAt (start, end = start) {
+  acceptSuggestionAt (start, end = start) {
     const extendedRange = extendtoSuggestionRange(this, start, end)
     // console.log('extended range from ', { start, end }, ' to ', extendedRange)
     const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)
@@ -551,7 +551,7 @@ export class QuillBinding {
    * @param {number} start
    * @param {number} end
    */
-  rejectChangesAt (start, end = start) {
+  rejectSuggestionAt (start, end = start) {
     const extendedRange = extendtoSuggestionRange(this, start, end)
     // console.log('extended range from ', { start, end }, ' to ', extendedRange)
     const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)

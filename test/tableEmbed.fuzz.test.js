@@ -12,7 +12,7 @@ import { createQuillEditor } from './utils.js'
 import Delta from 'quill-delta'
 // @ts-ignore
 import { init } from 'yjs/testHelper'
-import { normQuillDelta } from 'y-quill'
+import { normQuillDelta } from '@y/quill'
 
 /**
  * @typedef {Array<import('quill-delta').Op>} DeltaOps

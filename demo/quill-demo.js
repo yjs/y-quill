@@ -98,14 +98,14 @@ const editor = new Quill(editorContainer, {
             case 'accept': {
               const sel = this.quill.getSelection(false)
               if (sel != null) {
-                currentBinding?.acceptChangesAt(sel.index, sel.index + sel.length)
+                currentBinding?.acceptSuggestionAt(sel.index, sel.index + sel.length)
               }
               break
             }
             case 'reject': {
               const sel = this.quill.getSelection(false)
               if (sel != null) {
-                currentBinding?.rejectChangesAt(sel.index, sel.index + sel.length)
+                currentBinding?.rejectSuggestionAt(sel.index, sel.index + sel.length)
               }
               break
             }

@@ -45,13 +45,13 @@ const ycellToDelta = (ycell) => {
 }
 
 /**
- * @type {import('y-quill').EmbedDef<any, any>}
+ * @type {import('@y/quill').EmbedDef<any, any>}
  */
 export const tableEmbed = {
 /**
    * @param {YTableXmlType} yxmlTable
    * @param {TableDocument} op
-   * @param {import('y-quill').QuillBinding} _binding
+   * @param {import('@y/quill').QuillBinding} _binding
    */
   update: (yxmlTable, op, _binding) => {
     if (!yxmlTable.hasAttribute('cells')) {

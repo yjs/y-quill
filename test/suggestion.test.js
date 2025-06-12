@@ -254,7 +254,7 @@ export const testSuggestionReject = () => {
   ytext.insert(0, '12345')
   am.suggestionMode = true
   editor.updateContents([{ retain: 2 }, { insert: 'X' }, { delete: 2 }])
-  binding.rejectChangesAt(2)
+  binding.rejectSuggestionAt(2)
   const editorContent = editor.getContents().ops
   t.compare(editorContent, [{ insert: '12345\n' }])
   validate()
@@ -265,7 +265,7 @@ export const testSuggestionAcceptPartialFormat1 = () => {
   ytext.insert(0, '12345')
   am.suggestionMode = true
   editor.updateContents([{ retain: 2 }, { retain: 2, attributes: { bold: true } }])
-  binding.acceptChangesAt(1, 3)
+  binding.acceptSuggestionAt(1, 3)
   t.compare(ytext.getContent(am).toJSON(), [{ insert: '12' }, { insert: '34', attributes: { bold: true } }, { insert: '5' }])
   validate()
 }
@@ -284,7 +284,7 @@ export const testSuggestionAcceptOverlapFormat = () => {
     { insert: '4', attributes: { bold: true, suggestion: 'delete', attributionDelete: 'unknown' } },
     { insert: '5', attributes: { bold: true } }
   ])
-  binding.acceptChangesAt(2, 2)
+  binding.acceptSuggestionAt(2, 2)
   t.compare(ytext.getContent(am).toJSON(), [{ insert: '15', attributes: { bold: true } }])
   t.compare(normQuillDelta(editor.getContents().ops), [
     { insert: '15', attributes: { bold: true } }
@@ -305,7 +305,7 @@ export const testSuggestionAcceptOverlapFormat2 = () => {
     { insert: '45', attributes: { bold: true } },
     { insert: '6' }
   ])
-  binding.acceptChangesAt(2, 2)
+  binding.acceptSuggestionAt(2, 2)
   t.compare(ytext.getContent(am).toJSON(), [{ insert: '12345', attributes: { bold: true } }, { insert: '6' }])
   t.compare(normQuillDelta(editor.getContents().ops), [
     { insert: '12345', attributes: { bold: true } }, { insert: '6' }
@@ -399,9 +399,9 @@ const qChanges = [
     const accept = prng.bool(gen)
     t.info(`${accept ? 'Accept' : 'Reject'} change at pos ${insertPos}. suggestionMode: ${p.am.suggestionMode} (${p.name})`)
     if (accept) {
-      p.binding.acceptChangesAt(insertPos)
+      p.binding.acceptSuggestionAt(insertPos)
     } else {
-      p.binding.rejectChangesAt(insertPos)
+      p.binding.rejectSuggestionAt(insertPos)
     }
   }
 ]

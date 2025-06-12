@@ -1,7 +1,7 @@
 import * as t from 'lib0/testing.js'
 import * as object from 'lib0/object'
 import * as Y from 'yjs'
-import { normQuillDelta } from 'y-quill'
+import { normQuillDelta } from '@y/quill'
 
 import { createQuillEditor } from './utils.js'
 

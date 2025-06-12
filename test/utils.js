@@ -1,6 +1,6 @@
 import Quill from 'quill'
 import Delta from 'quill-delta'
-import { QuillBinding } from 'y-quill'
+import { QuillBinding } from '@y/quill'
 import * as Y from 'yjs'
 
 import { register as registerSuggestionBlots } from '../src/blots/suggestion.js'
