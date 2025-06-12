@@ -236,11 +236,12 @@ export const testQuillFormatOfSuggestion = () => {
 }
 
 export const testQuillSuggestedFormatting = () => {
-  const { editor, ytext, suggestionYText, validate } = createQuillEditor()
+  const { editor, ytext, suggestionYText, attributionManager, validate } = createQuillEditor()
   ytext.insert(0, 'hello world!')
   editor.updateContents([{ retain: 6 }, { retain: 5, attributes: { bold: true } }])
   suggestionYText.format(0, 3, { italic: true })
   const editorContent = editor.getContents().ops
+  console.log(suggestionYText.getDelta(attributionManager).toJSON())
   t.compare(editorContent, [{ insert: 'hel', attributes: { italic: true, attributionFormat: 'unknown' } }, { insert: 'lo ' }, { insert: 'world', attributes: { bold: true, attributionFormat: 'unknown' } }, { insert: '!\n' }])
   editor.updateContents([{ retain: 0 }, { insert: 'XXX', attributes: { bold: true } }])
   const editorContent2 = editor.getContents().ops
@@ -300,7 +301,8 @@ export const testSuggestionAcceptOverlapFormat2 = () => {
   editor.updateContents([{ retain: 1 }, { retain: 3, attributes: { bold: true } }]) // bolden "234"
   t.compare(normQuillDelta(editor.getContents().ops), [
     { insert: '12', attributes: { bold: true } },
-    { insert: '345', attributes: { bold: true, attributionFormat: 'unknown' } }, // actually, it should be only 3 that it attributed. 345 is fine too
+    { insert: '3', attributes: { bold: true, attributionFormat: 'unknown' } },
+    { insert: '45', attributes: { bold: true } },
     { insert: '6' }
   ])
   binding.acceptChangesAt(2, 2)

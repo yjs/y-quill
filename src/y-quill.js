@@ -160,7 +160,7 @@ export const extendtoSuggestionRange = (binding, start, end) => {
     }
     remainingLen -= opLen
   }
-  if (isSuggestionOp(delta[endDeltaIndex])) {
+  if (endDeltaIndex < delta.length && isSuggestionOp(delta[endDeltaIndex])) {
     end += getDeltaInsertOpLength(delta[endDeltaIndex]) - remainingLen
     endDeltaIndex++
   }
