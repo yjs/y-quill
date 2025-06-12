@@ -74,9 +74,9 @@ const updateCursor = (quillCursors, aw, clientId, doc, type, awareness, attribut
  * @template {Y.XmlElement} YType
  *
  * @typedef {Object} EmbedDef
- * @property {(a:YType,b:EmbedDelta,binding:import('y-quill').QuillBinding)=>YType} EmbedDef.update
- * @property {(src:YType,events:Array<Y.YXmlEvent>)=>EmbedDelta} EmbedDef.eventsToDelta
- * @property {(src:YType)=>EmbedDelta} EmbedDef.typeToDelta
+ * @property {(a:YType,b:EmbedDelta,binding:import('y-quill').QuillBinding,attributionsManager:Y.AbstractAttributionManager)=>YType} EmbedDef.update
+ * @property {(src:YType,events:Array<Y.YXmlEvent>,attributionsManager:Y.AbstractAttributionManager)=>EmbedDelta} EmbedDef.eventsToDelta
+ * @property {(src:YType,attributionsManager:Y.AbstractAttributionManager)=>EmbedDelta} EmbedDef.typeToDelta
  */
 
 /**
@@ -224,7 +224,7 @@ export class QuillBinding {
           const embedName = op.insert.nodeName
           const embedDef = this.embeds[embedName]
           if (embedDef != null) {
-            op.insert = { [embedName]: embedDef.typeToDelta(op.insert) }
+            op.insert = { [embedName]: embedDef.typeToDelta(op.insert, this.attributionManager) }
           }
         }
         op.attributes = object.assign({}, op.attributes, this._attributionToAttributes(op.attribution))
@@ -280,7 +280,7 @@ export class QuillBinding {
             if (embed == null) {
               console.warn(`Custom embed "${child.nodeName}" not defined!`)
             }
-            embedEvents.set(child, { [child.nodeName]: embed.eventsToDelta(child, /** @type {Array<Y.YXmlEvent>} */ (events)) })
+            embedEvents.set(child, { [child.nodeName]: embed.eventsToDelta(child, /** @type {Array<Y.YXmlEvent>} */ (events), this.attributionManager) })
           }
         })
         /**
@@ -343,7 +343,7 @@ export class QuillBinding {
                 const nodeName = d.insert.nodeName
                 const embedDef = embeds[nodeName]
                 if (embedDef != null) {
-                  op = { insert: { [/** @type {string} */ (nodeName)]: embedDef.typeToDelta(d.insert) } }
+                  op = { insert: { [/** @type {string} */ (nodeName)]: embedDef.typeToDelta(d.insert, this.attributionManager) } }
                 }
               }
               sanitizedDelta.push(Object.assign({}, op, { attributes: Object.assign({}, this._negatedUsedFormats, d.attributes || {}) }))
@@ -474,7 +474,7 @@ export class QuillBinding {
                 const embedDef = embeds[embedName]
                 const yembed = new Y.XmlElement(embedName)
                 type.insertEmbed(index, yembed)
-                embedDef.update(yembed, /** @type {Record<string,any>} */ (op.insert)[embedName], this)
+                embedDef.update(yembed, /** @type {Record<string,any>} */ (op.insert)[embedName], this, this.attributionManager)
                 forward(1)
               } else if (op.retain) {
                 const yembedType = /** @type {any} */ (item?.content).type
@@ -482,7 +482,7 @@ export class QuillBinding {
                   const embedName = yembedType.nodeName
                   const embedDef = embeds[embedName]
                   if (embedDef != null && /** @type {Record<string,any>} */ (op.retain)[embedName] != null) {
-                    embedDef.update(yembedType, /** @type {Record<string,any>} */ (op.retain)[embedName], this)
+                    embedDef.update(yembedType, /** @type {Record<string,any>} */ (op.retain)[embedName], this, this.attributionManager)
                   } else {
                     console.warn(`expected embed type "${embedName}"`)
                   }
