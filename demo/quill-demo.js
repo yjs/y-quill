@@ -100,7 +100,6 @@ const editor = new Quill(editorContainer, {
               if (sel != null) {
                 currentBinding?.acceptChangesAt(sel.index, sel.index + sel.length)
               }
-              console.log('accepted suggestion')
               break
             }
             case 'reject': {
@@ -108,7 +107,6 @@ const editor = new Quill(editorContainer, {
               if (sel != null) {
                 currentBinding?.rejectChangesAt(sel.index, sel.index + sel.length)
               }
-              console.log('rejected suggestion :(')
               break
             }
           }

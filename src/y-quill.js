@@ -235,7 +235,7 @@ export class QuillBinding {
         // }
         return op
       })
-      console.log('generated delta', res, 'from ychange: ', d.toJSON())
+      // console.log('generated delta', res, 'from ychange: ', d.toJSON())
       return res
     }
     // This object contains all attributes used in the quill instance
@@ -248,7 +248,6 @@ export class QuillBinding {
      * @param {{ added: Array<number>, removed: Array<number>, updated: Array<number> }} change
      */
     this._awarenessChange = ({ added, removed, updated }) => {
-      console.log('received awareness change')
       const states = /** @type {Awareness} */ (awareness).getStates()
       added.forEach(id => {
         updateCursor(quillCursors, states.get(id), id, doc, type, /** @type {Awareness} */ (awareness), this.attributionManager)
@@ -331,7 +330,7 @@ export class QuillBinding {
         }
         if (event != null) {
           const eventDelta = /** @type {any} */ (this._deltaToQuillDelta(event.getDelta(this.attributionManager)))
-          console.log('ytext observer called ', { delta: eventDelta })
+          // console.log('ytext observer called ', { delta: eventDelta })
           // We always explicitly set attributes, otherwise concurrent edits may
           // result in quill assuming that a text insertion shall inherit existing
           // attributes.
@@ -392,7 +391,7 @@ export class QuillBinding {
           // diff the documents if we find implicit changes from quill
           const { ops: implicitChanges } = new Delta(normQuillDelta(removeAttributions(this._deltaToQuillDelta(type.getDelta(this.attributionManager), false)))).diff(new Delta(normQuillDelta(removeAttributions(quill.getContents().ops))))
           if (implicitChanges.length > 0 && (implicitChanges[0].retain !== type.length || implicitChanges[implicitChanges.length - 1].insert !== '\n' || implicitChanges[implicitChanges.length - 1].attributes != null)) {
-            console.warn('try to apply implicit changes', implicitChanges)
+            // console.warn('try to apply implicit changes', implicitChanges)
             this.doc.transact(() => {
               // reuse the quillObserver which transforms custom embeds
               this._quillObserver(null, { ops: implicitChanges }, null, 'implicit')
@@ -409,7 +408,7 @@ export class QuillBinding {
      * @param {any} origin
      */
     this._quillObserver = (_eventType, delta, _state, origin) => {
-      console.log('quill observer called ', { delta })
+      // console.log('quill observer called ', { delta })
       if (delta && delta.ops) {
         const ops = delta.ops
         // Split ops into two sets: changes related to custom embeds and all other changes. The
@@ -541,7 +540,7 @@ export class QuillBinding {
    */
   acceptChangesAt (start, end = start) {
     const extendedRange = extendtoSuggestionRange(this, start, end)
-    console.log('extended range from ', { start, end }, ' to ', extendedRange)
+    // console.log('extended range from ', { start, end }, ' to ', extendedRange)
     const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.acceptChanges(startId, endId)
@@ -554,7 +553,7 @@ export class QuillBinding {
    */
   rejectChangesAt (start, end = start) {
     const extendedRange = extendtoSuggestionRange(this, start, end)
-    console.log('extended range from ', { start, end }, ' to ', extendedRange)
+    // console.log('extended range from ', { start, end }, ' to ', extendedRange)
     const { startId, endId } = indexRangeToRelRange(this, extendedRange.start, extendedRange.end)
     if (this.attributionManager instanceof Y.DiffAttributionManager && startId != null && endId != null) {
       this.attributionManager.rejectChanges(startId, endId)
