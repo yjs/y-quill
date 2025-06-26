@@ -521,7 +521,9 @@ export class QuillBinding {
     quill.on('editor-change', this._quillObserver)
     // This indirectly initializes _negatedUsedFormats.
     // Make sure that this call this after the _quillObserver is set.
-    quill.setContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager)), this)
+    const diffToPrevDoc = new Delta(new Delta(normQuillDelta(quill.getContents().ops))).diff(new Delta(normQuillDelta(this._deltaToQuillDelta(type.getDelta(this.attributionManager)))))
+    quill.setContents(diffToPrevDoc, this)
+    // quill.setContents(this._deltaToQuillDelta(type.getDelta(this.attributionManager)), this)
     // init remote cursors
     if (quillCursors !== null && awareness) {
       awareness.getStates().forEach((aw, clientId) => {

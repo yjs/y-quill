@@ -59,7 +59,7 @@
   },
   "homepage": "https://github.com/yjs/y-quill#readme",
   "dependencies": {
-    "lib0": "^0.2.97"
+    "lib0": "^0.2.109"
   },
   "peerDependencies": {
     "quill": "^2.0.0",
