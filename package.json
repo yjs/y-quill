@@ -32,6 +32,10 @@
       "import": "./src/y-quill.js",
       "require": "./dist/y-quill.cjs"
     },
+    "@y/quill/blots/suggestion.js": {
+      "types": "./dist/src/y-quill.d.ts",
+      "import": "./src/blots/suggestion.js"
+    },
     "./package.json": "./package.json"
   },
   "repository": {
@@ -63,7 +67,7 @@
     "yjs": "^14.0.0-7"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.5.5",
@@ -72,7 +76,7 @@
     "concurrently": "^8.2.2",
     "jsdom": "^24.0.0",
     "quill": "^2.0.2",
-    "rollup": "^4.41.0",
+    "rollup": "^4.44.1",
     "standard": "^17.1.0",
     "typescript": "^5.8.3",
     "yjs": "^14.0.0-7"
