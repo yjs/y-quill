@@ -33,7 +33,7 @@
       "require": "./dist/y-quill.cjs"
     },
     "./blots/suggestion": {
-      "types": "./dist/src/y-quill.d.ts",
+      "types": "./dist/src/blots/suggestion.d.ts",
       "import": "./src/blots/suggestion.js"
     },
     "./package.json": "./package.json"
