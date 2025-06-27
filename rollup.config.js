@@ -52,7 +52,7 @@ export default [{
     sourcemap: true
   },
   plugins: [
-      customResolve,
+    customResolve,
     nodeResolve({
       mainFields: ['module', 'browser', 'main']
     }),
