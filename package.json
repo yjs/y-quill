@@ -32,7 +32,7 @@
       "import": "./src/y-quill.js",
       "require": "./dist/y-quill.cjs"
     },
-    "@y/quill/blots/suggestion.js": {
+    "./blots/suggestion": {
       "types": "./dist/src/y-quill.d.ts",
       "import": "./src/blots/suggestion.js"
     },
@@ -62,6 +62,7 @@
     "lib0": "^0.2.109"
   },
   "peerDependencies": {
+    "parchment": "^3.0.0",
     "quill": "^2.0.0",
     "quill-cursors": "^4.0.2",
     "yjs": "^14.0.0-7"
