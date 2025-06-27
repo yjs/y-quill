@@ -1,6 +1,6 @@
 {
   "name": "@y/quill",
-  "version": "2.0.0-0",
+  "version": "2.0.0-1",
   "description": "QuillJs bindings for Yjs",
   "main": "./dist/y-quill.cjs",
   "module": "./src/y-quill.js",
