@@ -36,6 +36,10 @@
       "types": "./dist/src/blots/suggestion.d.ts",
       "import": "./src/blots/suggestion.js"
     },
+    "./embeds/table-embed": {
+      "types": "./dist/src/embeds/table-embed.d.ts",
+      "import": "./src/embeds/table-embed.js"
+    },
     "./package.json": "./package.json"
   },
   "repository": {
