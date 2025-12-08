@@ -1,9 +1,10 @@
 import Quill from 'quill'
 import Delta from 'quill-delta'
-import { QuillBinding } from 'y-quill'
+import { QuillBinding } from '@y/quill'
 import * as Y from 'yjs'
 
-import { tableEmbed } from '../embeds/table-embed.js'
+import { register as registerSuggestionBlots } from '../src/blots/suggestion.js'
+import { tableEmbed } from '../src/embeds/table-embed.js'
 import TableEmbed from 'quill/modules/tableEmbed.js'
 
 const Parchment = Quill.import('parchment')
@@ -195,9 +196,19 @@ const Text = Quill.import('blots/text')
  * @type {any}
  */
 const Image = Quill.import('formats/image')
+/**
+ * @type {any}
+ */
+const Bold = Quill.import('formats/bold')
+/**
+ * @type {any}
+ */
+const Italic = Quill.import('formats/italic')
 
-const registry = new Parchment.Registry()
+export const registry = new Parchment.Registry()
 registry.register(
+  Bold,
+  Italic,
   Scroll,
   Block,
   Break,
@@ -209,6 +220,7 @@ registry.register(
   /** @type {any} */ (TableBlot),
   /** @type {any} */ (DeltaBlot)
 )
+registerSuggestionBlots(registry)
 
 /**
  * @typedef {object} TestData
@@ -227,7 +239,7 @@ Delta.registerEmbed('delta', {
 /**
  * @type {{ [k:string]: import('../src/y-quill.js').EmbedDef<any,any> }}
  */
-const embeds = {
+export const embeds = {
   'table-embed': tableEmbed,
   delta: {
     /**
@@ -239,7 +251,7 @@ const embeds = {
         yxml.setAttribute('ytext', new Y.Text())
       }
       const ytext = yxml.getAttribute('ytext')
-      ytext?.applyDelta(op)
+      ytext?.applyDelta(/** @type {any} */ (op))
     },
 
     /**
@@ -251,12 +263,12 @@ const embeds = {
       const ytext = yxml.getAttribute('ytext')
       const ytextevent = events.find(event => event.target === ytext)
       if (ytextevent) {
-        return /** @type {any} */ (ytextevent.delta)
+        return /** @type {any} */ (ytextevent.delta.toJSON())
       }
       return []
     },
     typeToDelta: (yxml) => {
-      return yxml.getAttribute('ytext').toDelta()
+      return yxml.getAttribute('ytext').getDelta().toJSON()
     }
   }
 }

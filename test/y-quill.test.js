@@ -13,6 +13,22 @@ import { createQuillEditor } from './utils.js'
  * @typedef {import('./utils.js').TestData} TestData
  */
 
+/**
+ * Tests a bunch of edge-cases around newlines.
+ * An implicit change is created when inserting a newline at the end of the document. y-quill is
+ * supposed to properly normalize the delta before calculating a diff.
+ */
+export const testNewline = () => {
+  const ydoc = new Y.Doc()
+  const { editor, type } = createQuillEditor(ydoc)
+  const { editor: editor2, type: type2 } = createQuillEditor(ydoc)
+  editor.updateContents([{ insert: '\n' }])
+  t.compare(editor.getContents().ops, [{ insert: '\n\n' }])
+  t.compare(editor.getContents().ops, editor2.getContents().ops)
+  t.compare(type.toString(), '\n')
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
+}
+
 export const testCustomEmbedBasic = () => {
   const ydoc = new Y.Doc()
   const { editor, type } = createQuillEditor(ydoc)
@@ -21,7 +37,7 @@ export const testCustomEmbedBasic = () => {
   editor.updateContents([{ retain: { delta: [{ delete: 7 }] } }])
   t.compare(editor.getContents().ops, [{ insert: { delta: [{ insert: 'test' }] } }, { insert: '\n' }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testBasicInsert = () => {
@@ -161,7 +177,7 @@ const qChanges = [
  */
 const checkResult = result => {
   // all "delta" custom embeds are transformed to Y.XmlElements
-  t.assert(result.testObjects[0].type.toDelta().every(/** @param {any} d */ d => {
+  t.assert(result.testObjects[0].type.getDelta().toJSON().every(/** @param {any} d */ d => {
     return d.insert == null || d.insert.delta == null
   }))
   for (let i = 1; i < result.testObjects.length; i++) {

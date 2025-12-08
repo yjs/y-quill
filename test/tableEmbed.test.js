@@ -1,7 +1,7 @@
 import * as t from 'lib0/testing.js'
 import * as object from 'lib0/object'
 import * as Y from 'yjs'
-import { normQuillDelta } from 'y-quill'
+import { normQuillDelta } from '@y/quill'
 
 import { createQuillEditor } from './utils.js'
 
@@ -36,7 +36,7 @@ export const testBasic = () => {
   }])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testComposeAddARow = () => {
@@ -90,7 +90,7 @@ export const testComposeAddARow = () => {
   }])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testAddsTwoRows = () => {
@@ -152,7 +152,7 @@ export const testAddsTwoRows = () => {
   }])
   t.compare(object.size(/** @type {any} */ (editor).getContents().ops[0].insert['table-embed'].cells), 1)
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testAddsARowAndChangesCellContent = () => {
@@ -214,7 +214,7 @@ export const testAddsARowAndChangesCellContent = () => {
     }
   }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testDeletesAColumn = () => {
@@ -263,7 +263,7 @@ export const testDeletesAColumn = () => {
     }
   }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testMoveColumn = () => {
@@ -320,7 +320,7 @@ export const testMoveColumn = () => {
     }
   }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }
 
 export const testRemoveACellAttribute = () => {
@@ -363,5 +363,5 @@ export const testRemoveACellAttribute = () => {
     }
   }])
   t.compare(editor.getContents().ops, editor2.getContents().ops)
-  t.compare(type.toDelta(), type2.toDelta())
+  t.compare(type.getDelta().toJSON(), type2.getDelta().toJSON())
 }

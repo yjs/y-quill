@@ -94,7 +94,7 @@ const qChanges = [
  */
 const checkResult = result => {
   // all "delta" custom embeds are transformed to Y.XmlElements
-  t.assert(result.testObjects[0].type.toDelta().every(/** @param {any} d */ d => {
+  t.assert(result.testObjects[0].type.getDelta().toJSON().every(/** @param {any} d */ d => {
     return d.insert == null || d.insert.delta == null
   }))
   for (let i = 1; i < result.testObjects.length; i++) {

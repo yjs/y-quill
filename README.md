@@ -70,7 +70,7 @@ This package already ships with a couple of custom deltas that might be useful.
 #### Custom Delta: table-embed
 
 ```javascript
-import { tableEmbed } from 'y-quill/embeds/table-embed'
+import { tableEmbed } from '@y/quill/embeds/table-embed'
 import TableEmbed from 'quill/modules/tableEmbed.js'
 TableEmbed.register()
 
@@ -162,7 +162,7 @@ const embeds = {
      * Y.Text.
      */
     typeToDelta: (yxml) => {
-      return yxml.getAttribute('ytext').toDelta()
+      return yxml.getAttribute('ytext').getDelta().toJSON()
     }
   }
 }

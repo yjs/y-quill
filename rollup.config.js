@@ -1,6 +1,15 @@
 import nodeResolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 
+const customResolve = {
+  resolveId (importee) {
+    switch (importee) {
+      case 'yjs': return `${process.cwd()}/node_modules/yjs/src/index.js`
+      case '@y/quill': return `${process.cwd()}/src/y-quill.js`
+    }
+  }
+}
+
 export default [{
   input: './src/y-quill.js',
   output: [{
@@ -9,16 +18,16 @@ export default [{
     format: 'cjs',
     sourcemap: true
   }],
-  external: id => /^lib0\//.test(id)
+  external: id => /^(lib0|quill|quill-delta|yjs)\//.test(id)
 }, {
-  input: './embeds/table-embed.js',
+  input: './src/embeds/table-embed.js',
   output: [{
     name: 'tableEmbed',
     file: 'dist/embeds/table-embed.cjs',
     format: 'cjs',
     sourcemap: true
   }],
-  external: id => /^lib0\//.test(id)
+  external: id => /^(lib0|quill|quill-delta|yjs)\//.test(id)
 }, {
   input: './demo/quill-demo.js',
   output: [{
@@ -28,6 +37,7 @@ export default [{
     sourcemap: true
   }],
   plugins: [
+    customResolve,
     nodeResolve({
       mainFields: ['module', 'browser', 'main']
     }),
@@ -42,6 +52,7 @@ export default [{
     sourcemap: true
   },
   plugins: [
+    customResolve,
     nodeResolve({
       mainFields: ['module', 'browser', 'main']
     }),
